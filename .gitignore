@@ -19,6 +19,33 @@ Edge上架素材/
 魔搭与观猹上线素材/
 wechat-launch-20260728/
 
+# 内容创作产物（路演/品牌/小红书等，与扩展产品无关，暂不跟踪）
+12730-*
+一点-pitch-*
+一点-路演*
+一点-黑客松路演-*
+archive-fonts.zip
+fde_*.py
+compact_fde_resume_fonts.py
+edge-store-status.png
+riverbank-organizers*.png
+studio-*
+article-assets/
+assets/
+brand-soil*/
+brand-work/
+docs/superpowers/
+kb-sync-source/
+preview-artifacts/
+yidian-xhs-competition/
+品牌土壤创作室/
+小红书*/
+
+# 一次性文档构建脚本与旧比对脚本
+tools/*.py
+tools/check-source-match.ps1
+tools/diff-wt-pkg.ps1
+
 # IDE 与运行产物
 .qoder/
 .preview-assets/
