@@ -163,6 +163,17 @@ try {
   assert.equal(await panel.locator('#document-title').innerText(), '一点官网');
   assert.ok(await panel.locator('#next-review').innerText());
   assert.equal(await panel.evaluate(() => document.documentElement.scrollWidth), 410);
+  await extensionPage.evaluate(async () => {
+    const { records } = await chrome.storage.local.get('records');
+    records[0].nextReviewAt = Date.now() - 1_000;
+    await chrome.storage.local.set({ records });
+  });
+  await extensionPage.evaluate((tabId) => chrome.tabs.sendMessage(tabId, { type: 'show-pet', mode: 'review' }), current.id);
+  await webPage.locator('[data-action="review"]').waitFor({ state: 'visible' });
+  await webPage.locator('[data-action="review"]').click();
+  await webPage.waitForFunction(() => document.querySelector('#otter-yidian-card')?.textContent?.includes('相见 2/4'));
+  assert.equal((await extensionPage.evaluate(() => chrome.storage.local.get('records'))).records[0].stage, 2);
+  await panel.waitForFunction(() => document.querySelector('#progress-text')?.textContent === '2/4');
   const collectionTab = context.waitForEvent('page');
   await panel.getByRole('link', { name: '全部收藏' }).click();
   assert.match((await collectionTab).url(), /\/library\.html$/);
@@ -195,7 +206,7 @@ try {
   assert.equal(await disconnectedPanel.locator('#open-extensions').isVisible(), true);
   console.log('Browser upgrade verified: same folder keeps ID and record; second folder splits storage and shortcut.');
   console.log('Studio verified: four-step demo works and links to the current ZIP.');
-  console.log('Extension verified: the pet saves a page, the side panel shows its next review, and a disconnected library shows recovery steps.');
+  console.log('Extension verified: the pet saves and reviews a page, the side panel tracks 0/4 to 2/4, and a disconnected library shows recovery steps.');
 } finally {
   await context?.close();
   if (siteServer) await new Promise((resolve) => siteServer.close(resolve));
