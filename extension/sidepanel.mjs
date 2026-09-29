@@ -194,8 +194,9 @@ elements['reduced-motion'].addEventListener('change', async () => {
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== 'session' || !changes[entryKey]) return;
-  loadModel().catch(showLoadError);
+  const contextChanged = areaName === 'session' && changes[entryKey];
+  const recordsChanged = areaName === 'local' && (changes.records || changes.archivedRecords) && !model?.stale;
+  if (contextChanged || recordsChanged) loadModel().catch(showLoadError);
 });
 chrome.tabs.onActivated?.addListener(({ tabId, windowId }) => {
   if (windowId !== panelWindowId || !Number.isInteger(model?.tabId)) return;

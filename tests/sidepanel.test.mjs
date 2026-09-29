@@ -53,7 +53,7 @@ async function loadPanel({
     windows: { getCurrent: async () => ({ id: 7 }) },
     storage: {
       session: { get: async (key) => ({ [key]: state.context }) },
-      onChanged: { addListener() {} },
+      onChanged: { addListener(fn) { listeners.storage = fn; } },
     },
     runtime: { sendMessage: sendMessage ?? defaultSendMessage },
     tabs: {
@@ -162,6 +162,21 @@ test('切换标签或导航后停用旧网页动作', async () => {
   listeners.updated(11, { status: 'loading' });
   listeners.activated({ tabId: 11, windowId: 7 });
   assert.equal(elements['primary-action'].hidden, true, '页面导航后不能恢复旧网页动作');
+});
+
+test('收藏从别处写入时刷新侧栏进度，旧页状态不会被刷新复活', async () => {
+  const { elements, state, listeners } = await loadPanel({ context: { mode: 'current', page, tabId: 11 } });
+  assert.equal(elements['progress-text'].textContent, '0/4');
+  state.records = [createRecord({ title: page.title, url: page.url, now })];
+  listeners.storage({ records: { newValue: state.records } }, 'local');
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(elements['progress-text'].textContent, '1/4');
+  state.activeTabId = 12;
+  listeners.activated({ tabId: 12, windowId: 7 });
+  listeners.storage({ records: { newValue: [] } }, 'local');
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(elements['primary-action'].hidden, true);
+  assert.match(elements['status-copy'].textContent, /页面已切换/);
 });
 
 test('reduced-motion 设置同步到根节点，面板不发网络请求', async () => {
