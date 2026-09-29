@@ -10,12 +10,12 @@
 
 ## 已验收
 
-- `npm run check`：114 项通过。
+- `npm run check`：117 项通过，包含侧栏切换网页时对迟到的读取结果、错误和设置变更的保护。
 - `npm run test:e2e`：真实 Edge 中，向线上 1.3.1 包写入正常与异常旧记录，在原目录替换 1.3.2 并刷新扩展后台后，确认扩展 ID 与正常收藏保留、异常原件进入备份；侧边栏从 0/4 随本地收藏变化更新为 1/4；第二目录产生独立 ID、独立存储及快捷键冲突；官网演示、网页宠物、断连恢复和无需后台的原始备份导出通过。临时测试权限不进入发布包。
 - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1`：以上检查通过并生成 `studio/yidian-1.3.2.zip`。
 - 独立读取 ZIP：23 个条目，均为便携的 `/` 目录路径，内容 SHA256 与 `extension/` 逐文件一致，根目录 `manifest.json` 为 1.3.2。同一源码连续打包两次，ZIP SHA256 相同。
 
-待发布 ZIP 的 SHA256 为 `031ed0149b0e310e550481196e87893dfb8fc87f969ae04f7a9a7d80225fff9d`；部署后应重新下载并核对。
+待发布 ZIP 的 SHA256 为 `5062d826d139f0c7d56ea97a9d0d2267a3eded90f9fd5cf8ba0ccbecceb71f20`；部署后应重新下载并核对。
 
 ## 发布顺序
 

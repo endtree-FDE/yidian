@@ -33,16 +33,23 @@ function stateName(record, now = Date.now()) {
 
 async function loadModel() {
   const revision = ++loadRevision;
-  const context = await readEntryContext();
-  const page = context?.page ?? null;
+  let context;
+  let page;
   let record = null;
   let settings;
-  if (page) {
-    const petState = await send({ type: 'get-pet-state', mode: 'current', page });
-    record = petState.record;
-    settings = petState.settings;
-  } else {
-    settings = (await send({ type: 'get-settings' })).settings;
+  try {
+    context = await readEntryContext();
+    page = context?.page ?? null;
+    if (page) {
+      const petState = await send({ type: 'get-pet-state', mode: 'current', page });
+      record = petState.record;
+      settings = petState.settings;
+    } else {
+      settings = (await send({ type: 'get-settings' })).settings;
+    }
+  } catch (error) {
+    if (revision === loadRevision) throw error;
+    return;
   }
   if (revision !== loadRevision) return;
   model = { page, record, settings, tabId: context?.tabId ?? null, name: stateName(record) };
@@ -128,6 +135,7 @@ function showLoadError(error) {
 
 function showStalePage(reason = 'tab-switch') {
   if (!model || (model.stale && reason !== 'navigation')) return;
+  ++loadRevision;
   model.stale = true;
   model.staleReason = reason;
   elements['status-copy'].textContent = '页面已切换或重新加载。再按 Alt+Shift+Y 更新这里。';
@@ -139,9 +147,11 @@ function showStalePage(reason = 'tab-switch') {
 
 async function currentPageIsActive() {
   if (!Number.isInteger(model?.tabId)) return true;
-  const [active] = await chrome.tabs.query({ active: true, windowId: panelWindowId });
-  if (active?.id === model.tabId && !model.stale) return true;
-  showStalePage();
+  try {
+    const [active] = await chrome.tabs.query({ active: true, windowId: panelWindowId });
+    if (active?.id === model.tabId && !model.stale) return true;
+    showStalePage();
+  } catch { showStalePage('navigation'); }
   return false;
 }
 
@@ -152,7 +162,9 @@ async function mutate(message) {
   elements['live-status'].textContent = '';
   try {
     const response = await send(message);
-    await loadModel();
+    if (model?.stale) {
+      if (response.settings) model.settings = response.settings;
+    } else await loadModel();
     return response;
   } catch (error) {
     elements['live-status'].textContent = explainRuntimeError(error);
@@ -189,7 +201,8 @@ elements['delete-record'].addEventListener('click', async () => {
 elements['reduced-motion'].addEventListener('change', async () => {
   const response = await mutate({ type: 'set-reduced-motion', value: elements['reduced-motion'].checked });
   if (!response) {
-    await loadModel();
+    if (model?.stale) elements['reduced-motion'].checked = Boolean(model.settings.reducedMotion);
+    else await loadModel();
   }
 });
 

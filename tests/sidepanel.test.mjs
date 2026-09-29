@@ -179,6 +179,53 @@ test('收藏从别处写入时刷新侧栏进度，旧页状态不会被刷新�
   assert.match(elements['status-copy'].textContent, /页面已切换/);
 });
 
+test('切换网页后，迟到的读取结果或错误都不能覆盖提示', async () => {
+  for (const outcome of ['success', 'failure']) {
+    let finish;
+    let calls = 0;
+    const { elements, listeners } = await loadPanel({
+      context: { mode: 'current', page, tabId: 11 },
+      sendMessage: async () => {
+        calls += 1;
+        if (calls === 1) return { ok: true, record: null, settings: { reducedMotion: false } };
+        return new Promise((resolve, reject) => { finish = outcome === 'success' ? resolve : reject; });
+      },
+    });
+    listeners.storage({ records: { newValue: [] } }, 'local');
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(typeof finish, 'function');
+    listeners.activated({ tabId: 12, windowId: 7 });
+    if (outcome === 'success') finish({ ok: true, record: null, settings: { reducedMotion: false } });
+    else finish(new Error('late worker failure'));
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(elements['primary-action'].hidden, true);
+    assert.match(elements['status-copy'].textContent, /页面已切换/);
+    assert.equal(elements.retry.hidden, true);
+  }
+});
+
+test('无法核对活动标签时不执行旧网页收藏', async () => {
+  const { elements } = await loadPanel({ context: { mode: 'current', page, tabId: 11 } });
+  chrome.tabs.query = async () => { throw new Error('tab unavailable'); };
+  await elements['primary-action'].dispatch('click');
+  assert.equal(elements['primary-action'].hidden, true);
+  assert.match(elements['status-copy'].textContent, /再按 Alt\+Shift\+Y 更新/);
+});
+
+test('切换网页后调整动态效果不会重新显示旧页动作', async () => {
+  const { elements, listeners } = await loadPanel({
+    context: { mode: 'current', page, tabId: 11 },
+    sendMessage: async (message) => message.type === 'get-pet-state'
+      ? { ok: true, record: null, settings: { reducedMotion: false } }
+      : { ok: true, settings: { reducedMotion: true } },
+  });
+  listeners.activated({ tabId: 12, windowId: 7 });
+  elements['reduced-motion'].checked = true;
+  await elements['reduced-motion'].dispatch('change');
+  assert.equal(elements['primary-action'].hidden, true);
+  assert.match(elements['status-copy'].textContent, /页面已切换/);
+});
+
 test('reduced-motion 设置同步到根节点，面板不发网络请求', async () => {
   const { elements } = await loadPanel({
     context: { mode: 'current', page },
