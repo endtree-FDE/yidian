@@ -5,6 +5,7 @@ import {
 
 const RECORDS_KEY = 'records';
 const ARCHIVED_KEY = 'archivedRecords';
+const UNREADABLE_KEY = 'unreadableRecords';
 const SETTINGS_KEY = 'settings';
 const DIGEST_DAY_KEY = 'lastDigestDay';
 const REVIEW_ALARM = 'yidian-next-review';
@@ -28,25 +29,50 @@ const enqueueBadgeRefresh = createSerialQueue();
 const enqueueRecordsMutation = createSerialQueue();
 
 async function getRawRecords() {
-  return (await chrome.storage.local.get(RECORDS_KEY))[RECORDS_KEY] ?? [];
+  const stored = await chrome.storage.local.get(RECORDS_KEY);
+  return Object.hasOwn(stored, RECORDS_KEY) ? stored[RECORDS_KEY] : [];
 }
 
 async function getRecords() {
   return consolidateRecords(await getRawRecords()).records;
 }
 
-async function saveRecords(records) {
-  await chrome.storage.local.set({ [RECORDS_KEY]: records });
+async function getRawArchivedRecords() {
+  const stored = await chrome.storage.local.get(ARCHIVED_KEY);
+  return Object.hasOwn(stored, ARCHIVED_KEY) ? stored[ARCHIVED_KEY] : [];
 }
 
-async function getArchivedRecords() {
-  const archived = (await chrome.storage.local.get(ARCHIVED_KEY))[ARCHIVED_KEY];
-  return Array.isArray(archived) ? archived : [];
+async function getUnreadableRecords() {
+  const stored = (await chrome.storage.local.get(UNREADABLE_KEY))[UNREADABLE_KEY];
+  return Array.isArray(stored) ? stored : stored === undefined ? [] : [{ source: UNREADABLE_KEY, record: stored }];
 }
 
-async function saveArchivedRecords(archived) {
-  await chrome.storage.local.set({ [ARCHIVED_KEY]: archived });
+async function saveCollections(updates) {
+  try {
+    const rejected = [];
+    for (const key of [RECORDS_KEY, ARCHIVED_KEY]) {
+      if (!Object.hasOwn(updates, key)) continue;
+      const raw = key === RECORDS_KEY ? await getRawRecords() : await getRawArchivedRecords();
+      rejected.push(...consolidateRecords(raw).rejected.map((record) => ({ source: key, record })));
+    }
+    if (rejected.length) {
+      updates[UNREADABLE_KEY] = [
+        ...(Object.hasOwn(updates, UNREADABLE_KEY) ? updates[UNREADABLE_KEY] : await getUnreadableRecords()),
+        ...rejected,
+      ];
+    }
+    await chrome.storage.local.set(updates);
+  } catch (error) {
+    console.error('[一点] 保存本地记录失败', error);
+    throw new Error('无法保存本地记录，请导出备份后重试', { cause: error });
+  }
 }
+
+async function saveRecords(records) { return saveCollections({ [RECORDS_KEY]: records }); }
+
+async function getArchivedRecords() { return consolidateRecords(await getRawArchivedRecords()).records; }
+
+async function saveArchivedRecords(archived) { return saveCollections({ [ARCHIVED_KEY]: archived }); }
 
 async function getSettings() {
   const raw = (await chrome.storage.local.get(SETTINGS_KEY))[SETTINGS_KEY];
@@ -208,7 +234,9 @@ async function showPetOnTab(tab, mode = 'current') {
 
 async function refreshInjectedPets() {
   const tabs = await chrome.tabs.query({});
-  await Promise.allSettled(tabs.filter((tab) => tab.id).map((tab) => chrome.tabs.sendMessage(tab.id, { type: 'refresh-pet' })));
+  await Promise.allSettled(
+    tabs.filter((tab) => tab.id && isWebUrl(tab.url)).map((tab) => chrome.tabs.sendMessage(tab.id, { type: 'refresh-pet' }))
+  );
 }
 
 async function markCurrent(tab) {
@@ -261,11 +289,21 @@ async function completeReview(normalizedUrl) {
 async function removeRecord(normalizedUrl) {
   return enqueueRecordsMutation(async () => {
     const records = await getRecords();
-    const next = records.filter((record) => record.normalizedUrl !== normalizedUrl);
-    if (next.length !== records.length) await saveRecords(next);
-    await syncDerivedState(next);
+    const archived = await getArchivedRecords();
+    const nextRecords = records.filter((record) => record.normalizedUrl !== normalizedUrl);
+    const nextArchived = archived.filter((record) => record.normalizedUrl !== normalizedUrl);
+    const removedFromRecords = nextRecords.length !== records.length;
+    const removedFromArchived = nextArchived.length !== archived.length;
+    if (!removedFromRecords && !removedFromArchived) {
+      return { ok: false, error: '记录不存在，可能已被删除' };
+    }
+    await saveCollections({
+      ...(removedFromRecords ? { [RECORDS_KEY]: nextRecords } : {}),
+      ...(removedFromArchived ? { [ARCHIVED_KEY]: nextArchived } : {}),
+    });
+    await syncDerivedState(nextRecords);
     await refreshInjectedPets().catch(() => undefined);
-    return { ok: true, removed: next.length !== records.length };
+    return { ok: true, removed: true, fromArchived: removedFromArchived };
   });
 }
 
@@ -298,8 +336,7 @@ async function archiveGrown() {
       const existing = merged.get(record.normalizedUrl);
       if (!existing || record.updatedAt >= existing.updatedAt) merged.set(record.normalizedUrl, record);
     }
-    await saveRecords(remaining);
-    await saveArchivedRecords([...merged.values()]);
+    await saveCollections({ [RECORDS_KEY]: remaining, [ARCHIVED_KEY]: [...merged.values()] });
     await syncDerivedState(remaining);
     return { ok: true, archived: grown.length, remaining: remaining.length };
   });
@@ -315,25 +352,29 @@ async function restoreArchived(normalizedUrl) {
       return { ok: false, error: '收藏库里已有同一网页的记录' };
     }
     const next = consolidateRecords([...records, archived[index]]).records;
-    await saveRecords(next);
-    await saveArchivedRecords(archived.filter((_, i) => i !== index));
+    await saveCollections({ [RECORDS_KEY]: next, [ARCHIVED_KEY]: archived.filter((_, i) => i !== index) });
     await syncDerivedState(next);
     await refreshInjectedPets().catch(() => undefined);
     return { ok: true, record: archived[index] };
   });
 }
 
-async function importRecords(rawRecords, rawArchived) {
+async function importRecords(rawRecords, rawArchived, rawUnreadable) {
   if (!Array.isArray(rawRecords) || rawRecords.length > 5000) throw new TypeError('请选择有效的一点备份文件');
   const archivedList = rawArchived == null ? [] : rawArchived;
+  const unreadableList = rawUnreadable == null ? [] : rawUnreadable;
   if (!Array.isArray(archivedList) || archivedList.length > 5000) throw new TypeError('请选择有效的一点备份文件');
+  if (!Array.isArray(unreadableList) || unreadableList.length > 5000
+    || unreadableList.some((item) => !item || typeof item !== 'object' || typeof item.source !== 'string')) {
+    throw new TypeError('备份中的旧数据无效');
+  }
   const incoming = rawRecords.map((record) => normalizeImportedRecord(record));
   const incomingArchived = archivedList.map((record) => normalizeImportedRecord(record));
   return enqueueRecordsMutation(async () => {
     const records = consolidateRecords(mergeByKey(await getRecords(), incoming)).records;
-    const archived = mergeByKey(await getArchivedRecords(), incomingArchived);
-    await saveRecords(records);
-    await saveArchivedRecords(archived);
+    const archived = consolidateRecords(mergeByKey(await getArchivedRecords(), incomingArchived)).records;
+    const unreadable = [...await getUnreadableRecords(), ...unreadableList];
+    await saveCollections({ [RECORDS_KEY]: records, [ARCHIVED_KEY]: archived, [UNREADABLE_KEY]: unreadable });
     await syncDerivedState(records);
     await refreshInjectedPets().catch(() => undefined);
     return { ok: true, imported: incoming.length + incomingArchived.length, total: records.length };
@@ -366,8 +407,13 @@ export async function handleMessage(message) {
   if (!message || typeof message !== 'object') return { ok: false, error: '无效操作' };
   if (message.type === 'get-pet-state') {
     const [records, settings] = await Promise.all([getRecords(), getSettings()]);
-    const normalized = normalizeUrl(message.page.canonicalUrl || message.page.url);
-    const currentRecord = records.find((item) => item.normalizedUrl === normalized) ?? null;
+    let normalized;
+    try {
+      normalized = normalizeUrl(message.page.canonicalUrl || message.page.url);
+    } catch {
+      normalized = null;
+    }
+    const currentRecord = normalized ? records.find((item) => item.normalizedUrl === normalized) ?? null : null;
     const dueRecord = selectNextDue(records);
     const reviewMode = message.mode === 'review';
     const record = reviewMode ? (dueRecord ?? currentRecord) : currentRecord;
@@ -384,11 +430,31 @@ export async function handleMessage(message) {
       const bTime = b.stage === MAX_STAGE ? Infinity : b.nextReviewAt;
       return aTime - bTime || b.updatedAt - a.updatedAt;
     });
-    return { ok: true, records };
+    const unreadableCount = (await getUnreadableRecords()).length
+      + consolidateRecords(await getRawRecords()).rejected.length
+      + consolidateRecords(await getRawArchivedRecords()).rejected.length;
+    return { ok: true, records, unreadableCount };
   }
   if (message.type === 'list-archived') {
     const records = (await getArchivedRecords()).toSorted((a, b) => b.updatedAt - a.updatedAt);
     return { ok: true, records };
+  }
+  if (message.type === 'export-backup') {
+    const [records, archived, unreadable] = await Promise.all([
+      getRawRecords(), getRawArchivedRecords(), getUnreadableRecords(),
+    ]);
+    const activeResult = consolidateRecords(records);
+    const archivedResult = consolidateRecords(archived);
+    return {
+      ok: true,
+      records: activeResult.records,
+      archived: archivedResult.records,
+      unreadable: [
+        ...unreadable,
+        ...activeResult.rejected.map((record) => ({ source: RECORDS_KEY, record })),
+        ...archivedResult.rejected.map((record) => ({ source: ARCHIVED_KEY, record })),
+      ],
+    };
   }
   if (message.type === 'open-library') {
     await chrome.tabs.create({ url: chrome.runtime.getURL('library.html') });
@@ -410,7 +476,7 @@ export async function handleMessage(message) {
   if (message.type === 'get-settings') return { ok: true, settings: await getSettings() };
   if (message.type === 'set-notify-on-due') return setNotifyOnDue(message.value);
   if (message.type === 'set-quiet-hours') return setQuietHours(message.value);
-  if (message.type === 'import-records') return importRecords(message.records, message.archived);
+  if (message.type === 'import-records') return importRecords(message.records, message.archived, message.unreadable);
   return { ok: false, error: '未知操作' };
 }
 
@@ -425,7 +491,7 @@ async function openSidePanel(tab) {
   if (!Number.isInteger(tab?.windowId)) return;
   const page = tab.url && isWebUrl(tab.url) ? { title: tab.title ?? '', url: tab.url } : null;
   await chrome.storage.session.set({
-    [`entryContext:${tab.windowId}`]: { mode: 'current', page, openedAt: Date.now() },
+    [`entryContext:${tab.windowId}`]: { mode: 'current', page, tabId: tab.id, openedAt: Date.now() },
   });
   await chrome.sidePanel.open({ windowId: tab.windowId });
 }
@@ -478,8 +544,16 @@ if (globalThis.chrome?.runtime?.onMessage) {
 }
 async function migrateStoredRecords() {
   return enqueueRecordsMutation(async () => {
-    const result = consolidateRecords(await getRawRecords());
-    if (result.changed) await saveRecords(result.records);
+    const rawRecords = await getRawRecords();
+    const rawArchived = await getRawArchivedRecords();
+    const result = consolidateRecords(rawRecords);
+    const archivedResult = consolidateRecords(rawArchived);
+    if (result.changed || archivedResult.changed) {
+      await saveCollections({
+        ...(result.changed ? { [RECORDS_KEY]: result.records } : {}),
+        ...(archivedResult.changed ? { [ARCHIVED_KEY]: archivedResult.records } : {}),
+      });
+    }
     return result;
   });
 }

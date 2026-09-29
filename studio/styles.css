@@ -32,9 +32,9 @@ h1 em { color:var(--green); font-style:normal; white-space:nowrap; }
 .demo-topline button { padding:0; border:0; background:transparent; color:var(--green); cursor:pointer; }
 .pet-stage { position:relative; height:190px; overflow:hidden; border-radius:22px; background:linear-gradient(#edf7f2 72%,#dcebe4 72%); }
 .pet-stage::after { content:""; position:absolute; left:0; right:0; bottom:42px; height:1px; background:rgba(32,51,45,.09); }
-.demo-pet { --fill:0%; position:absolute; left:28px; bottom:33px; z-index:2; width:112px; height:128px; cursor:grab; touch-action:none; user-select:none; filter:drop-shadow(0 12px 9px rgba(32,51,45,.18)); animation:walk 9s ease-in-out infinite alternate; }
+.demo-pet { --fill:0%; position:absolute; left:28px; bottom:33px; z-index:2; width:112px !important; height:128px !important; cursor:grab; touch-action:none; user-select:none; filter:drop-shadow(0 12px 9px rgba(32,51,45,.18)); animation:walk 9s ease-in-out infinite alternate; }
 .demo-pet.dragging,.demo-pet.manual { cursor:grabbing; animation:none; }
-.pet-body { position:relative; width:104px; height:112px; margin:0 auto; overflow:hidden; border:4px solid var(--ink); border-radius:48% 52% 45% 55% / 54% 48% 52% 46%; background:#f0eadf; }
+.pet-body { position:relative; width:112px !important; height:112px !important; overflow:hidden; border:4px solid var(--ink) !important; border-radius:48% 52% 45% 55% / 54% 48% 52% 46% !important; background:#f0eadf; }
 .liquid { position:absolute; left:0; right:0; bottom:0; height:var(--fill); background:linear-gradient(145deg,#99d8c3,var(--mint)); transition:height .65s cubic-bezier(.2,.9,.25,1); }
 .liquid::before { content:""; position:absolute; left:-12%; top:-7px; width:124%; height:15px; border-radius:50%; background:var(--mint-light); animation:wave 2.5s ease-in-out infinite alternate; }
 .eyes::before,.eyes::after { content:""; position:absolute; top:43px; width:8px; height:11px; border-radius:50%; background:var(--ink); }

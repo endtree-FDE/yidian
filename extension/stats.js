@@ -1,10 +1,5 @@
 import { summarizeRecords } from './domain.mjs';
-
-async function send(message) {
-  const response = await chrome.runtime.sendMessage(message);
-  if (!response?.ok) throw new Error(response?.error || '操作失败，请重试');
-  return response;
-}
+import { explainRuntimeError, send } from './runtime.mjs';
 
 async function render() {
   const [active, archived] = await Promise.all([
@@ -34,5 +29,5 @@ async function render() {
 }
 
 render().catch((error) => {
-  document.querySelector('.intro').textContent = error.message || '统计暂时读不到数据，请稍后再来。';
+  document.querySelector('.intro').textContent = explainRuntimeError(error);
 });

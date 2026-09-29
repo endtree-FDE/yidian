@@ -228,10 +228,51 @@ test('并发完成同一回访只能推进一级', async () => {
 test('records mutation queue 一次写入失败后仍执行下一次操作', async () => {
   const state = chromeMock({ failWrites: 1 });
   const { handleMessage } = await loadWorker('recover');
-  await assert.rejects(handleMessage({ type: 'mark-current', tab: tabA }), /storage unavailable/);
+  await assert.rejects(handleMessage({ type: 'mark-current', tab: tabA }), /无法保存本地记录/);
   const result = await handleMessage({ type: 'mark-current', tab: tabB });
   assert.equal(result.created, true);
   assert.deepEqual(state.local.records.map((record) => record.title), ['B']);
+});
+
+test('升级隔离无法识别的旧记录，正常收藏仍可读取且原始数据可导出', async () => {
+  const state = chromeMock();
+  const { handleMessage } = await loadWorker('unreadable-migration');
+  const valid = { ...tabA, stage: 1, nextReviewAt: Date.now() + 86_400_000, createdAt: 1, updatedAt: 1 };
+  state.local.records = [valid, null, { title: '本地旧文档', url: 'file:///old-note' }];
+  await state.listeners.installed();
+  assert.equal(state.local.records.length, 1);
+  assert.deepEqual(state.local.unreadableRecords.map((item) => item.source), ['records', 'records']);
+  const list = await handleMessage({ type: 'list-records' });
+  assert.equal(list.records.length, 1);
+  assert.equal(list.unreadableCount, 2);
+  const backup = await handleMessage({ type: 'export-backup' });
+  assert.equal(backup.records.length, 1);
+  assert.deepEqual(backup.unreadable, state.local.unreadableRecords);
+});
+
+test('首次写入前遇到异常旧记录，也先留存原始数据', async () => {
+  const state = chromeMock();
+  const { handleMessage } = await loadWorker('unreadable-write');
+  state.local.records = [null];
+  const result = await handleMessage({ type: 'mark-current', tab: tabA });
+  assert.equal(result.created, true);
+  assert.equal(state.local.records.length, 1);
+  assert.deepEqual(state.local.unreadableRecords, [{ source: 'records', record: null }]);
+});
+
+test('包含异常旧数据的备份仍可导入，并保留无法显示的原始条目', async () => {
+  const source = chromeMock();
+  const { handleMessage: exportMessage } = await loadWorker('unreadable-export');
+  source.local.records = [{ ...tabA, stage: 1, createdAt: 1, updatedAt: 1, nextReviewAt: Date.now() + 86_400_000 }, null];
+  const backup = await exportMessage({ type: 'export-backup' });
+  assert.equal(backup.records.length, 1);
+  assert.deepEqual(backup.unreadable, [{ source: 'records', record: null }]);
+
+  const target = chromeMock();
+  const { handleMessage: importMessage } = await loadWorker('unreadable-import');
+  await importMessage({ type: 'import-records', ...backup });
+  assert.equal(target.local.records.length, 1);
+  assert.deepEqual(target.local.unreadableRecords, backup.unreadable);
 });
 
 test('工具栏有到期记录时显示回访，快捷键始终显示当前页面 Mark', async () => {

@@ -108,6 +108,16 @@ test('旧重复项合为一条，并把后一次收藏保留为途中偶遇', ()
   assert.equal(encounterCount(result.records[0]), 1);
 });
 
+test('异常旧记录不阻断正常收藏，并交给存储层留存', () => {
+  const valid = marked();
+  const invalid = { title: '旧记录', url: 'file:///old-note' };
+  const result = consolidateRecords([valid, null, invalid]);
+  assert.deepEqual(result.records.map((record) => record.title), [valid.title]);
+  assert.deepEqual(result.rejected, [null, invalid]);
+  assert.equal(result.changed, true);
+  assert.deepEqual(consolidateRecords({ broken: true }).rejected, [{ broken: true }]);
+});
+
 test('完成后可显式开始新一轮', () => {
   const complete = { ...marked(), stage: 4, nextReviewAt: null };
   const restarted = restartRecord(complete, T0 + 40 * DAY_MS);

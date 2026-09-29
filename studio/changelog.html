@@ -11,7 +11,7 @@
   <link rel="icon" href="icon.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=17">
+  <link rel="stylesheet" href="styles.css?v=20">
 </head>
 <body>
   <nav class="nav" aria-label="主导航">
@@ -26,10 +26,49 @@
       <p>每次更新做了什么、修好了什么，都会在这里留下简短记录。</p>
     </header>
 
+    <section class="release" aria-labelledby="release-132">
+      <div class="release-meta">
+        <span>2026-09-29</span>
+        <span class="contact-status">官网当前版本</span>
+      </div>
+      <div>
+        <p class="section-tag">1.3.2 · 收藏与升级更稳</p>
+        <h2 id="release-132">旧收藏出现异常，也能继续使用。</h2>
+        <ul>
+          <li>无法识别的旧记录会留在浏览器本地，并随 JSON 备份导出；正常收藏仍能查看和回看。</li>
+          <li>官网说明了解压版在原文件夹更新的方法，避免重复加载后收藏分散、快捷键冲突。</li>
+          <li>侧边栏先展示打开时的网页状态和操作，改用简洁的四步进度；切换网页后停用旧页动作。空收藏库不再堆放搜索筛选或自动展开迁移说明。</li>
+          <li>收藏或迁移完成后，收藏库和侧边栏会更新进度；后台连接失败时会说明恢复方法，收藏库还能直接导出本机原始备份。</li>
+          <li>发布前核对源码、版本号和安装包，并补上异常数据与升级流程的检查。</li>
+        </ul>
+      </div>
+    </section>
+    <section class="release" aria-labelledby="release-131">
+      <div class="release-meta">
+        <span>2026-09-07</span>
+        <span class="contact-status">历史版本</span>
+      </div>
+      <div>
+        <p class="section-tag">1.3.1 · 修好了归档删除</p>
+        <h2 id="release-131">归档里的记录，现在也能删掉了。</h2>
+        <ul>
+          <li>修复了「已归档」里的记录无法删除的问题：删除现在会同时从收藏库和归档中移除。</li>
+          <li>删除不存在的记录时会明确提示，不再假装成功。</li>
+          <li>数据层加固：一条 URL 无效的旧记录不再让整个收藏库空白。</li>
+          <li>归档数据也纳入治理：读取、导入和浏览器启动时都会规范化归档记录，避免重复和损坏。</li>
+          <li>侧边栏和宠物注入对无效 URL 做了容错，遇到不认识的页面不会崩溃。</li>
+          <li>宠物卡片操作失败时会明确报错，不再静默返回空状态。</li>
+          <li>宠物被「先躲一躲」隐藏后会暂停漫游，不再在后台浪费 CPU。</li>
+          <li>本地存储写入失败时会给出提示，同时提高了扩展可用的本地存储空间。</li>
+          <li>收藏库搜索加了 150ms 防抖，大量记录时输入更流畅。</li>
+          <li>回看节奏、本地存储和最小权限没有变；解压版升级需沿用原安装文件夹。</li>
+        </ul>
+      </div>
+    </section>
     <section class="release" aria-labelledby="release-130">
       <div class="release-meta">
         <span>2026-08-19</span>
-        <span class="contact-status">官网当前版本</span>
+        <span class="contact-status">历史版本</span>
       </div>
       <div>
         <p class="section-tag">1.3.0 · 更温柔的回看</p>

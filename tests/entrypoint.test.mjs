@@ -6,7 +6,7 @@ const manifest = JSON.parse(await readFile(new URL('../extension/manifest.json',
 
 test('工具栏图标直接唤出网页宠物', () => {
   assert.equal('default_popup' in manifest.action, false);
-  assert.equal(manifest.version, '1.3.0');
+  assert.equal(manifest.version, '1.3.2');
   assert.equal(manifest.action.default_title, '打开一点｜收下或回看当前内容');
 });
 

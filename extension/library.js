@@ -1,11 +1,14 @@
 import { matchesRecordQuery, recordsToMarkdown } from './domain.mjs';
+import { explainRuntimeError, openExtensions, send } from './runtime.mjs';
 
 const recordsRoot = document.querySelector('#records');
 const status = document.querySelector('#status');
 const template = document.querySelector('#record-template');
-const migrationGuide = document.querySelector('#migration-guide');
 const archiveButton = document.querySelector('#archive-grown');
 const searchInput = document.querySelector('#search');
+const exportLocal = document.querySelector('#export-local');
+const retryLoad = document.querySelector('#retry-load');
+const openExtensionsButton = document.querySelector('#open-extensions');
 const { progress, stepCopy } = globalThis.YIDIAN_COPY;
 const reviewTime = new Intl.DateTimeFormat('zh-CN', {
   month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
@@ -17,6 +20,8 @@ let activeFilter = 'all';
 let activeQuery = '';
 let currentRecords = [];
 let currentArchived = [];
+let searchTimer = null;
+let loadRevision = 0;
 
 function encountersFor(record) {
   return Array.isArray(record.encounters) ? record.encounters : [];
@@ -42,12 +47,6 @@ function matchesFilter(record, now) {
   return true;
 }
 
-async function send(message) {
-  const response = await chrome.runtime.sendMessage(message);
-  if (!response?.ok) throw new Error(response?.error || '操作失败，请重试');
-  return response;
-}
-
 function stateLabel(record, now = Date.now()) {
   if (record.stage === 4) return '回看计划已完成 · 宠物长成';
   if (record.nextReviewAt <= now) return `今天待回看 · 进度 ${record.stage}/4`;
@@ -71,10 +70,6 @@ function render(records) {
   document.querySelector('#encounters').textContent = records.reduce((total, record) => total + encounterCount(record), 0);
   archiveButton.disabled = !records.some((item) => item.stage === 4);
   recordsRoot.replaceChildren();
-  if (!records.length && !archivedView && !migrationGuide.dataset.seen) {
-    migrationGuide.open = true;
-    migrationGuide.dataset.seen = 'true';
-  }
   if (!visibleRecords.length) {
     const empty = document.createElement('div');
     empty.className = 'empty';
@@ -84,16 +79,10 @@ function render(records) {
         : '还没有归档。点“归档已完成”，完成回看计划的收藏会收进这里，随时可以带回来。';
     } else if (!source.length) {
       const strong = document.createElement('strong');
-      strong.textContent = '还没有收藏。三十秒走一遍：';
-      const steps = document.createElement('ol');
-      steps.className = 'empty-steps';
-      steps.innerHTML = '<li>打开任意普通网页，点工具栏里的“一点”；</li><li>在弹出的卡片里点“替我收好”；</li><li>第 2 天，一点会带它回来见你。见过四次，它长成归档——这里不会变成只进不出的坟墓。</li>';
-      const kbdNote = document.createElement('p');
-      kbdNote.className = 'empty-kbd';
-      const kbd = document.createElement('kbd');
-      kbd.textContent = 'Ctrl+Shift+Y';
-      kbdNote.append('快捷键 ', kbd, ' 也能随时收下当前页。');
-      empty.append(strong, steps, kbdNote);
+      strong.textContent = '从一页值得再看的内容开始';
+      const copy = document.createElement('p');
+      copy.textContent = '打开普通网页，点击浏览器右上角的“一点”图标，再点“替我收好”。下次回看时间会出现在这里。';
+      empty.append(strong, copy);
     } else {
       empty.textContent = '这里暂时没有内容。换一个关系状态看看。';
     }
@@ -149,21 +138,60 @@ function render(records) {
   }
 }
 
-function showError(error) { status.textContent = error.message || '操作失败，请重试'; }
+function showError(error) { status.textContent = explainRuntimeError(error); }
+
+function showLoadError(error) {
+  showError(error);
+  status.classList.add('error');
+  for (const selector of ['.tools', '.summary-line', '.toolbar', '.filters', '#records']) {
+    document.querySelector(selector).hidden = true;
+  }
+  retryLoad.hidden = false;
+  exportLocal.hidden = false;
+  openExtensionsButton.hidden = false;
+}
 
 async function load(message = '') {
-  const [response, archivedResponse] = await Promise.all([
-    send({ type:'list-records' }),
-    send({ type:'list-archived' }),
-  ]);
+  const revision = ++loadRevision;
+  let response;
+  let archivedResponse;
+  try {
+    [response, archivedResponse] = await Promise.all([
+      send({ type:'list-records' }),
+      send({ type:'list-archived' }),
+    ]);
+  } catch (error) {
+    if (revision === loadRevision) throw error;
+    return;
+  }
+  if (revision !== loadRevision) return;
   currentArchived = archivedResponse.records;
+  const hasAny = response.records.length + currentArchived.length > 0;
+  if (!hasAny) {
+    activeFilter = 'all';
+    for (const button of document.querySelectorAll('.filters button')) {
+      const active = button.dataset.filter === 'all';
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    }
+  }
   render(response.records);
-  status.textContent = message;
+  status.classList.remove('error');
+  for (const selector of ['.tools', '#records']) document.querySelector(selector).hidden = false;
+  for (const selector of ['.summary-line', '.toolbar', '.filters']) document.querySelector(selector).hidden = !hasAny;
+  retryLoad.hidden = true;
+  exportLocal.hidden = true;
+  openExtensionsButton.hidden = true;
+  const unreadable = response.unreadableCount
+    ? `${response.unreadableCount} 条旧数据暂时无法显示；请导出备份并保留。`
+    : '';
+  status.textContent = [message, unreadable].filter(Boolean).join(' ');
 }
 
 searchInput.addEventListener('input', () => {
   activeQuery = searchInput.value;
-  render(currentRecords);
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => render(currentRecords), 150);
 });
 
 archiveButton.addEventListener('click', async () => {
@@ -185,28 +213,47 @@ for (const button of document.querySelectorAll('.filters button')) {
   });
 }
 
+function downloadBackup(payload, name = 'backup') {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `yidian-${name}-${new Date().toISOString().slice(0,10)}.json`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 document.querySelector('#export').addEventListener('click', async () => {
   try {
-    const [response, archivedResponse] = await Promise.all([
-      send({ type:'list-records' }),
-      send({ type:'list-archived' }),
-    ]);
-    const payload = {
+    const response = await send({ type:'export-backup' });
+    downloadBackup({
       version: 2,
       exportedAt: new Date().toISOString(),
       records: response.records,
-      archived: archivedResponse.records,
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `yidian-backup-${new Date().toISOString().slice(0,10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    status.textContent = archivedResponse.records.length
-      ? `已导出 ${response.records.length} 份记录（另含 ${archivedResponse.records.length} 份归档）`
-      : `已导出 ${response.records.length} 份记录`;
+      archived: response.archived,
+      ...(response.unreadable.length ? { unreadable: response.unreadable } : {}),
+    });
+    status.textContent = `已导出 ${response.records.length} 份收藏、${response.archived.length} 份归档`
+      + (response.unreadable.length ? `，另保留 ${response.unreadable.length} 条暂无法显示的旧数据` : '');
+  } catch (error) { showError(error); }
+});
+
+exportLocal.addEventListener('click', async () => {
+  try {
+    const raw = await chrome.storage.local.get(['records', 'archivedRecords', 'unreadableRecords']);
+    const unreadable = Array.isArray(raw.unreadableRecords)
+      ? [...raw.unreadableRecords]
+      : raw.unreadableRecords === undefined ? [] : [{ source:'unreadableRecords', record:raw.unreadableRecords }];
+    if (raw.records !== undefined && !Array.isArray(raw.records)) unreadable.push({ source:'records', record:raw.records });
+    if (raw.archivedRecords !== undefined && !Array.isArray(raw.archivedRecords)) unreadable.push({ source:'archivedRecords', record:raw.archivedRecords });
+    downloadBackup({
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      records: Array.isArray(raw.records) ? raw.records : [],
+      archived: Array.isArray(raw.archivedRecords) ? raw.archivedRecords : [],
+      ...(unreadable.length ? { unreadable } : {}),
+    }, 'raw-backup');
+    status.textContent = '已导出本机原始备份。先保留这个文件，再刷新扩展。';
   } catch (error) { showError(error); }
 });
 
@@ -231,14 +278,17 @@ document.querySelector('#export-markdown').addEventListener('click', async () =>
 document.querySelector('#import').addEventListener('change', async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
-  if (file.size > 5_000_000) {
-    showError(new Error('备份文件不能超过 5 MB'));
+  if (file.size > 25_000_000) {
+    showError(new Error('备份文件不能超过 25 MB'));
     event.target.value = '';
     return;
   }
   try {
     const payload = JSON.parse(await file.text());
-    const result = await send({ type:'import-records', records:payload.records ?? payload, archived:payload.archived });
+    const result = await send({
+      type:'import-records', records:payload.records ?? payload,
+      archived:payload.archived, unreadable:payload.unreadable,
+    });
     await load(`已带回 ${result.imported} 份记录，现在共有 ${result.total} 份收藏`);
   } catch (error) { showError(error); }
   event.target.value = '';
@@ -288,4 +338,11 @@ quietStart.addEventListener('change', saveQuietHours);
 quietEnd.addEventListener('change', saveQuietHours);
 initSettings();
 
-load().catch(showError);
+retryLoad.addEventListener('click', () => load().catch(showLoadError));
+openExtensionsButton.addEventListener('click', () => openExtensions().catch(showError));
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local' && ['records', 'archivedRecords', 'unreadableRecords'].some((key) => key in changes)) {
+    load().catch(showLoadError);
+  }
+});
+load().catch(showLoadError);
