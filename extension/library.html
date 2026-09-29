@@ -48,8 +48,22 @@
 
     <details class="howto">
       <summary>一点怎么用？</summary>
-      <p class="intro">这里保存你收下的网页和选段。每条内容共 4 步：收下 1 次，再回看 3 次。你可以查看下次回看的具体时间；到期时，点击浏览器工具栏里的“一点”完成回看。</p>
+      <p class="intro">这里保存你收下的网页和选段。每条内容共 4 步：收下 1 次，再回看 3 次。到期时，“今天看一条”会先带回一份；看过后可以记为已用上、推到明天，或收入归档。</p>
     </details>
+
+    <section id="today-card" class="today-card" aria-labelledby="today-heading" hidden>
+      <div class="today-heading"><p id="today-heading">今天看一条</p><span id="today-count"></span></div>
+      <h2 id="today-title"></h2>
+      <p id="today-source"></p>
+      <blockquote id="today-excerpt" hidden></blockquote>
+      <p class="today-hint">打开原网页看过后，选一个处理结果。稍后再看会推到明天；不再需要会收入可恢复的归档。</p>
+      <div class="today-actions">
+        <button id="today-open" type="button">打开原网页</button>
+        <button id="today-used" type="button">用上了</button>
+        <button id="today-later" type="button">稍后再看</button>
+        <button id="today-retire" type="button">不再需要</button>
+      </div>
+    </section>
 
     <p class="summary-line" aria-label="收藏概览" hidden>
       <span><strong id="total">0</strong>条收藏</span><i aria-hidden="true">·</i>

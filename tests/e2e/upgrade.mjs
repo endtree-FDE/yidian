@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -75,7 +75,7 @@ try {
   await launch(installed);
   assert.equal(ids()[0], originalId, 'updating the same folder changed the extension ID');
   page = await library(originalId);
-  assert.equal(await page.evaluate(() => chrome.runtime.getManifest().version), '1.3.2');
+  assert.equal(await page.evaluate(() => chrome.runtime.getManifest().version), '1.3.3');
   await page.evaluate(() => chrome.runtime.reload());
   page = await library(originalId);
   await page.waitForFunction(async () => {
@@ -118,8 +118,14 @@ try {
   assert.equal(await demo.locator('#percent').innerText(), '0/4');
   for (let step = 0; step < 4; step++) await demo.locator('#advance').click();
   assert.equal(await demo.locator('#percent').innerText(), '4/4');
-  assert.equal(await demo.locator('a[download]').getAttribute('href'), 'yidian-1.3.2.zip');
+  assert.equal(await demo.locator('a[download]').getAttribute('href'), 'yidian-1.3.3.zip');
   assert.deepEqual(pageErrors, []);
+  if (process.env.YIDIAN_CAPTURE) {
+    const output = fileURLToPath(new URL('../../output/', import.meta.url));
+    mkdirSync(output, { recursive: true });
+    await demo.locator('#features').screenshot({ path: path.join(output, 'review-site-features.png') });
+    await demo.locator('#updates').screenshot({ path: path.join(output, 'review-site-updates.png') });
+  }
 
   await context.close();
   context = undefined;
@@ -168,12 +174,52 @@ try {
     records[0].nextReviewAt = Date.now() - 1_000;
     await chrome.storage.local.set({ records });
   });
+  await extensionPage.reload();
+  await extensionPage.locator('#today-card').waitFor({ state: 'visible' });
+  assert.match(await extensionPage.locator('#today-title').innerText(), /一点/);
+  await extensionPage.setViewportSize({ width: 390, height: 820 });
+  assert.equal(await extensionPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  if (process.env.YIDIAN_CAPTURE) {
+    const output = fileURLToPath(new URL('../../output/', import.meta.url));
+    mkdirSync(output, { recursive: true });
+    await extensionPage.screenshot({ path: path.join(output, 'review-library.png'), fullPage: true });
+    await panel.screenshot({ path: path.join(output, 'review-sidepanel.png') });
+  }
+  await extensionPage.setViewportSize({ width: 1280, height: 800 });
+  await extensionPage.locator('#today-later').click();
+  await extensionPage.locator('#today-card').waitFor({ state: 'hidden' });
+  const postponed = (await extensionPage.evaluate(() => chrome.storage.local.get('records'))).records[0];
+  assert.equal(postponed.stage, 1);
+  assert.ok(postponed.nextReviewAt > Date.now());
+  await extensionPage.evaluate(async () => {
+    const { records } = await chrome.storage.local.get('records');
+    records[0].nextReviewAt = Date.now() - 1_000;
+    await chrome.storage.local.set({ records });
+  });
   await extensionPage.evaluate((tabId) => chrome.tabs.sendMessage(tabId, { type: 'show-pet', mode: 'review' }), current.id);
-  await webPage.locator('[data-action="review"]').waitFor({ state: 'visible' });
-  await webPage.locator('[data-action="review"]').click();
+  await webPage.locator('[data-action="used"]').waitFor({ state: 'visible' });
+  if (process.env.YIDIAN_CAPTURE) {
+    const output = fileURLToPath(new URL('../../output/', import.meta.url));
+    await webPage.screenshot({ path: path.join(output, 'review-pet.png') });
+  }
+  await webPage.locator('[data-action="used"]').click();
   await webPage.waitForFunction(() => document.querySelector('#otter-yidian-card')?.textContent?.includes('相见 2/4'));
   assert.equal((await extensionPage.evaluate(() => chrome.storage.local.get('records'))).records[0].stage, 2);
   await panel.waitForFunction(() => document.querySelector('#progress-text')?.textContent === '2/4');
+  await extensionPage.evaluate(async () => {
+    await chrome.runtime.sendMessage({ type: 'mark-current', tab: { title: '可归档的一页', url: 'https://example.com/retire' } });
+    const { records } = await chrome.storage.local.get('records');
+    records.find((record) => record.url.endsWith('/retire')).nextReviewAt = Date.now() - 1_000;
+    await chrome.storage.local.set({ records });
+  });
+  await extensionPage.reload();
+  await extensionPage.locator('#today-card').waitFor({ state: 'visible' });
+  await extensionPage.locator('#today-retire').click();
+  await extensionPage.locator('#today-card').waitFor({ state: 'hidden' });
+  const retired = await extensionPage.evaluate(() => chrome.storage.local.get(['records', 'archivedRecords']));
+  assert.equal(retired.records.length, 1);
+  assert.equal(retired.archivedRecords.length, 1);
+  assert.equal(retired.archivedRecords[0].encounters.at(-1).type, 'retired');
   const collectionTab = context.waitForEvent('page');
   await panel.getByRole('link', { name: '全部收藏' }).click();
   assert.match((await collectionTab).url(), /\/library\.html$/);

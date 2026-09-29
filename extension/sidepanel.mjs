@@ -6,7 +6,7 @@ const elements = Object.fromEntries(
     'progress-card', 'progress-text', 'meter-fill', 'source',
     'document-title', 'status-copy', 'excerpt', 'next-review', 'primary-action',
     'retry', 'open-extensions', 'manage', 'url-input', 'save-url', 'delete-record',
-    'live-status', 'reduced-motion',
+    'live-status', 'reduced-motion', 'review-choices', 'review-later', 'review-retire',
   ].map((id) => [id, document.getElementById(id)]),
 );
 
@@ -76,6 +76,7 @@ function render() {
   elements['reduced-motion'].checked = Boolean(settings.reducedMotion);
   document.documentElement.dataset.reducedMotion = settings.reducedMotion ? 'true' : 'false';
   setVisible(elements.manage, Boolean(record));
+  setVisible(elements['review-choices'], name === 'due');
 
   if (!page && !record) {
     elements['status-copy'].textContent = '请先打开普通网页，再用快捷键打开侧边栏。';
@@ -100,9 +101,9 @@ function render() {
       action: '',
     },
     due: {
-      copy: '这页已到回看时间。看过后，可以完成这次回看。',
+      copy: '这页已到回看时间。看过后，选一个处理结果。',
       next: '',
-      action: '完成这次回看',
+      action: '用上了',
     },
     grown: {
       copy: '三次回看已完成，不再自动提醒。',
@@ -128,6 +129,7 @@ function showLoadError(error) {
   elements['next-review'].textContent = '';
   setVisible(elements['progress-card'], false);
   setVisible(elements['primary-action'], false);
+  setVisible(elements['review-choices'], false);
   setVisible(elements.manage, false);
   setVisible(elements.retry, true);
   setVisible(elements['open-extensions'], true);
@@ -141,6 +143,7 @@ function showStalePage(reason = 'tab-switch') {
   elements['status-copy'].textContent = '页面已切换或重新加载。再按 Alt+Shift+Y 更新这里。';
   elements['next-review'].textContent = '';
   setVisible(elements['primary-action'], false);
+  setVisible(elements['review-choices'], false);
   setVisible(elements['progress-card'], false);
   setVisible(elements.manage, false);
 }
@@ -158,7 +161,7 @@ async function currentPageIsActive() {
 async function mutate(message) {
   if (busy) return null;
   busy = true;
-  elements['primary-action'].disabled = true;
+  for (const button of [elements['primary-action'], elements['review-later'], elements['review-retire']]) button.disabled = true;
   elements['live-status'].textContent = '';
   try {
     const response = await send(message);
@@ -171,7 +174,7 @@ async function mutate(message) {
     return null;
   } finally {
     busy = false;
-    elements['primary-action'].disabled = false;
+    for (const button of [elements['primary-action'], elements['review-later'], elements['review-retire']]) button.disabled = false;
   }
 }
 
@@ -181,10 +184,21 @@ elements['primary-action'].addEventListener('click', async () => {
     const response = await mutate({ type: 'mark-current', tab: model.page });
     if (response?.created) elements['live-status'].textContent = '收下了。第 2 天一点会带它回来。';
   } else if (model.name === 'due') {
-    const response = await mutate({ type: 'complete-review', normalizedUrl: model.record.normalizedUrl });
-    if (response?.changed) elements['live-status'].textContent = '这次见面记下了。';
+    const response = await mutate({ type: 'decide-review', normalizedUrl: model.record.normalizedUrl, choice: 'used' });
+    if (response?.changed) elements['live-status'].textContent = `这次用上了。回看进度 ${response.record.stage}/4。`;
   }
 });
+
+for (const [id, choice, copy] of [
+  ['review-later', 'later', '已推到明天，进度不变。'],
+  ['review-retire', 'retire', '已收入归档，需要时可以找回。'],
+]) {
+  elements[id].addEventListener('click', async () => {
+    if (!await currentPageIsActive() || model.name !== 'due') return;
+    const response = await mutate({ type: 'decide-review', normalizedUrl: model.record.normalizedUrl, choice });
+    if (response?.changed) elements['live-status'].textContent = copy;
+  });
+}
 
 elements.retry.addEventListener('click', () => loadModel().catch(showLoadError));
 elements['open-extensions'].addEventListener('click', () => openExtensions().catch(showLoadError));

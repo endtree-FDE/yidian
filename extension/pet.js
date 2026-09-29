@@ -106,7 +106,7 @@
       const say = stage === 4 ? '见了四次，它已经住进记忆里。' : due ? '它回来啦。今天再见一面？' : `我记得它。${nextReview}，再带回来。`;
       const encounterNote = encounterTotal ? `<p class="o-encounter"><i></i>途中偶遇 <strong>${encounterTotal}</strong> 次，原来的计划一直在继续</p>` : '';
       const primary = due
-        ? '<button class="o-primary" data-action="review">完成这次回看</button>'
+        ? '<button class="o-primary" data-action="used">用上了</button>'
         : isCurrent && stage === 4
           ? '<button class="o-primary" data-action="restart">从今天再开始一轮</button>'
           : isCurrent && canEncounter
@@ -115,7 +115,8 @@
               ? '<button class="o-primary" disabled>刚刚已经记下</button>'
               : '';
       const open = isCurrent ? '' : '<button class="o-open" data-action="open">打开原网页</button>';
-      card.innerHTML = `<div class="o-head"><p class="o-eyebrow">${label}</p><p class="o-say">${escapeHtml(say)}</p><h2 class="o-title">${escapeHtml(record.title)}</h2><p class="o-meta">${escapeHtml(record.sourceDomain)}</p></div>${encounterNote}${excerpt ? `<p class="o-excerpt">“${escapeHtml(excerpt)}”</p>` : ''}<div class="o-progress" style="--o-progress:${progress(stage)}%"><div><strong>${stage === 4 ? '一起走完了' : `相见 ${stage}/4`}</strong><span>${stage === 4 ? '宠物已经长成' : stepCopy(stage)}</span></div><i aria-hidden="true"></i><small>进度 ${stage}/4 · 宠物 ${progress(stage)}%</small></div><div class="o-actions">${primary}${open}<button class="o-secondary" data-action="motion">${state?.settings?.reducedMotion ? '继续散步' : '安静一下'}</button><button class="o-secondary" data-action="library">我的收藏</button><button class="o-secondary o-hide" data-action="hide">先躲一躲</button></div>`;
+      const decisions = due ? '<button class="o-secondary" data-action="later">稍后再看</button><button class="o-secondary" data-action="retire">不再需要</button>' : '';
+      card.innerHTML = `<div class="o-head"><p class="o-eyebrow">${label}</p><p class="o-say">${escapeHtml(say)}</p><h2 class="o-title">${escapeHtml(record.title)}</h2><p class="o-meta">${escapeHtml(record.sourceDomain)}</p></div>${encounterNote}${excerpt ? `<p class="o-excerpt">“${escapeHtml(excerpt)}”</p>` : ''}<div class="o-progress" style="--o-progress:${progress(stage)}%"><div><strong>${stage === 4 ? '一起走完了' : `相见 ${stage}/4`}</strong><span>${stage === 4 ? '宠物已经长成' : stepCopy(stage)}</span></div><i aria-hidden="true"></i><small>进度 ${stage}/4 · 宠物 ${progress(stage)}%</small></div><div class="o-actions${due ? ' o-review-actions' : ''}">${primary}${open}${decisions}<button class="o-secondary" data-action="motion">${state?.settings?.reducedMotion ? '继续散步' : '安静一下'}</button><button class="o-secondary" data-action="library">我的收藏</button>${due ? '' : '<button class="o-secondary o-hide" data-action="hide">先躲一躲</button>'}</div>`;
     }
     positionCard();
   }
@@ -137,9 +138,14 @@
         const result = await send({ type:'restart-journey', normalizedUrl:state.record.normalizedUrl });
         showToast(`新的一轮开始了。下次在 ${reviewTime.format(new Date(result.record.nextReviewAt))} 见。`);
       }
-      if (action === 'review') {
-        const result = await send({ type:'complete-review', normalizedUrl:state.record.normalizedUrl });
-        showToast(result.changed ? `${stepCopy(result.record.stage)}。进度 ${result.record.stage}/4，宠物又长大了一点。` : '现在还没到下一次回看。');
+      if (['used', 'later', 'retire'].includes(action)) {
+        const result = await send({ type:'decide-review', normalizedUrl:state.record.normalizedUrl, choice:action });
+        const messages = {
+          used: `这次用上了。进度 ${result.record.stage}/4，宠物又长大了一点。`,
+          later: '已推到明天，回看进度不变。',
+          retire: '已收入归档，需要时可以找回。',
+        };
+        showToast(result.changed ? messages[action] : '这条已不在待回看列表中。');
       }
       if (action === 'open') await send({ type:'open-record', url:state.record.url });
       if (action === 'library') await send({ type:'open-library' });

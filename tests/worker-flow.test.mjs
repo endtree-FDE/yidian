@@ -234,6 +234,32 @@ test('records mutation queue 一次写入失败后仍执行下一次操作', asy
   assert.deepEqual(state.local.records.map((record) => record.title), ['B']);
 });
 
+test('今天看一条的选择会改排提醒、推进进度或保留到归档', async () => {
+  const state = chromeMock();
+  const { handleMessage } = await loadWorker('review-decisions');
+  await handleMessage({ type: 'mark-current', tab: tabA });
+  await handleMessage({ type: 'mark-current', tab: tabB });
+  for (const record of state.local.records) record.nextReviewAt = 0;
+  const [a, b] = state.local.records.map((record) => record.normalizedUrl);
+  const later = await handleMessage({ type: 'decide-review', normalizedUrl: a, choice: 'later' });
+  assert.equal(later.changed, true);
+  assert.equal(later.record.stage, 1);
+  assert.ok(later.record.nextReviewAt > Date.now());
+  assert.equal(later.record.encounters.at(-1).type, 'deferred');
+  assert.deepEqual((await handleMessage({ type: 'list-records' })).records.map((record) => record.normalizedUrl), [b, a]);
+  const used = await handleMessage({ type: 'decide-review', normalizedUrl: b, choice: 'used' });
+  assert.equal(used.record.stage, 2);
+  assert.equal(used.record.encounters.at(-1).type, 'used');
+  const retired = await handleMessage({ type: 'decide-review', normalizedUrl: a, choice: 'retire' });
+  assert.equal(retired.changed, false, '推到明天的记录今天不能被旧动作归档');
+  state.local.records.find((record) => record.normalizedUrl === a).nextReviewAt = 0;
+  const archived = await handleMessage({ type: 'decide-review', normalizedUrl: a, choice: 'retire' });
+  assert.equal(archived.changed, true);
+  assert.equal(state.local.records.length, 1);
+  assert.equal(state.local.archivedRecords[0].encounters.at(-1).type, 'retired');
+  assert.equal((await handleMessage({ type: 'export-backup' })).archived.length, 1);
+});
+
 test('升级隔离无法识别的旧记录，正常收藏仍可读取且原始数据可导出', async () => {
   const state = chromeMock();
   const { handleMessage } = await loadWorker('unreadable-migration');

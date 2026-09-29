@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "一点｜收藏回看工具",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "第 1 天收下工作和学习中的重要内容，第 2、7、30 天再回来。",
   "minimum_chrome_version": "116",
   "permissions": ["activeTab", "alarms", "notifications", "scripting", "sidePanel", "storage", "unlimitedStorage"],

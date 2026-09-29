@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  DAY_MS, ENCOUNTER_COOLDOWN_MS, addEncounter, advanceRecord, canAddEncounter, consolidateRecords, createRecord, encounterCount,
-  normalizeUrl, restartRecord, selectNextDue, upsertByNormalizedUrl, updateRecordUrl
+  DAY_MS, ENCOUNTER_COOLDOWN_MS, addEncounter, advanceRecord, canAddEncounter, consolidateRecords, createRecord, deferRecord, encounterCount,
+  normalizeImportedRecord, normalizeUrl, recordsToMarkdown, restartRecord, selectNextDue, upsertByNormalizedUrl, updateRecordUrl
 } from '../extension/domain.mjs';
 
 const T0 = Date.UTC(2026, 6, 1, 8);
@@ -106,6 +106,22 @@ test('旧重复项合为一条，并把后一次收藏保留为途中偶遇', ()
   assert.equal(result.records[0].nextReviewAt, progressed.nextReviewAt);
   assert.equal(result.records[0].excerpt, '第二次看到');
   assert.equal(encounterCount(result.records[0]), 1);
+});
+
+test('稍后再看只推到明天，用上了才推进回看进度，备份保留选择', () => {
+  const dueAt = T0 + DAY_MS;
+  const deferred = deferRecord(marked(), dueAt).record;
+  assert.equal(deferred.stage, 1);
+  assert.equal(deferred.nextReviewAt, dueAt + DAY_MS);
+  assert.equal(deferred.encounters.at(-1).type, 'deferred');
+  assert.equal(selectNextDue([deferred], dueAt), null);
+  const used = advanceRecord(deferred, dueAt + DAY_MS, 'used').record;
+  assert.equal(used.stage, 2);
+  assert.equal(used.nextReviewAt, dueAt + 6 * DAY_MS);
+  assert.equal(used.encounters.at(-1).type, 'used');
+  assert.deepEqual(normalizeImportedRecord(used).encounters, used.encounters);
+  assert.match(recordsToMarkdown({ records: [used] }), /稍后再看[\s\S]*用上了/);
+  assert.equal(deferRecord(used, dueAt + DAY_MS).changed, false);
 });
 
 test('异常旧记录不阻断正常收藏，并交给存储层留存', () => {

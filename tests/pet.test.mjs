@@ -328,7 +328,9 @@ test('到期卡片明确显示状态、进度和完成动作', async () => {
   assert.match(harness.hook.card.innerHTML, /进度 1\/4/);
   assert.match(harness.hook.card.innerHTML, /相见 1\/4/);
   assert.match(harness.hook.card.innerHTML, /已收下 · 下一步是第 1 次回看/);
-  assert.match(harness.hook.card.innerHTML, /完成这次回看/);
+  assert.match(harness.hook.card.innerHTML, /data-action="used">用上了/);
+  assert.match(harness.hook.card.innerHTML, /data-action="later">稍后再看/);
+  assert.match(harness.hook.card.innerHTML, /data-action="retire">不再需要/);
   assert.doesNotMatch(harness.hook.card.innerHTML, /这次回来了/);
 });
 

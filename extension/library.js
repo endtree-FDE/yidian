@@ -1,4 +1,4 @@
-import { matchesRecordQuery, recordsToMarkdown } from './domain.mjs';
+import { matchesRecordQuery, recordsToMarkdown, selectNextDue } from './domain.mjs';
 import { explainRuntimeError, openExtensions, send } from './runtime.mjs';
 
 const recordsRoot = document.querySelector('#records');
@@ -20,6 +20,7 @@ let activeFilter = 'all';
 let activeQuery = '';
 let currentRecords = [];
 let currentArchived = [];
+let todayRecord = null;
 let searchTimer = null;
 let loadRevision = 0;
 
@@ -36,6 +37,9 @@ function eventCopy(event) {
   if (event.type === 'encounter') return '途中偶遇，原计划继续';
   if (event.type === 'restart') return '从今天开始新一轮';
   if (event.type === 'review') return `完成第 ${Math.max(1, event.stage - 1)} 次回看`;
+  if (event.type === 'used') return `用上了，完成第 ${Math.max(1, event.stage - 1)} 次回看`;
+  if (event.type === 'deferred') return '稍后再看，已推到明天';
+  if (event.type === 'retired') return '不再需要，已收入归档';
   return '见了一面';
 }
 
@@ -58,9 +62,24 @@ function nextLabel(record) {
   return `下次回看：${reviewTime.format(new Date(record.nextReviewAt))} 后可回看`;
 }
 
+function renderToday(records, now) {
+  todayRecord = selectNextDue(records, now);
+  const card = document.querySelector('#today-card');
+  card.hidden = !todayRecord;
+  if (!todayRecord) return;
+  const dueCount = records.filter((record) => record.stage < 4 && record.nextReviewAt <= now).length;
+  document.querySelector('#today-count').textContent = dueCount > 1 ? `还有 ${dueCount - 1} 条` : '就这一条';
+  document.querySelector('#today-title').textContent = todayRecord.title;
+  document.querySelector('#today-source').textContent = `${todayRecord.sourceDomain} · 已到回看时间 · ${todayRecord.stage}/4`;
+  const excerpt = document.querySelector('#today-excerpt');
+  excerpt.textContent = todayRecord.excerpt ? `“${todayRecord.excerpt}”` : '';
+  excerpt.hidden = !todayRecord.excerpt;
+}
+
 function render(records) {
   currentRecords = records;
   const now = Date.now();
+  renderToday(records, now);
   const archivedView = activeFilter === 'archived';
   const source = archivedView ? currentArchived : records;
   const visibleRecords = source.filter((record) => matchesRecordQuery(record, activeQuery) && matchesFilter(record, now));
@@ -92,9 +111,11 @@ function render(records) {
   for (const record of visibleRecords) {
     const node = template.content.firstElementChild.cloneNode(true);
     node.dataset.url = record.normalizedUrl;
-    node.querySelector('.record-state').textContent = stateLabel(record, now);
+    node.querySelector('.record-state').textContent = archivedView ? '已归档 · 不再提醒' : stateLabel(record, now);
     node.querySelector('h2').textContent = record.title;
-    node.querySelector('.record-meta').textContent = `${record.sourceDomain} · ${nextLabel(record)}`;
+    node.querySelector('.record-meta').textContent = archivedView
+      ? `${record.sourceDomain} · 需要时可带回收藏库`
+      : `${record.sourceDomain} · ${nextLabel(record)}`;
     const excerpt = node.querySelector('.record-excerpt');
     if (record.excerpt) { excerpt.textContent = `“${record.excerpt}”`; excerpt.hidden = false; }
     const encounterTotal = encounterCount(record);
@@ -143,6 +164,7 @@ function showError(error) { status.textContent = explainRuntimeError(error); }
 function showLoadError(error) {
   showError(error);
   status.classList.add('error');
+  document.querySelector('#today-card').hidden = true;
   for (const selector of ['.tools', '.summary-line', '.toolbar', '.filters', '#records']) {
     document.querySelector(selector).hidden = true;
   }
@@ -186,6 +208,29 @@ async function load(message = '') {
     ? `${response.unreadableCount} 条旧数据暂时无法显示；请导出备份并保留。`
     : '';
   status.textContent = [message, unreadable].filter(Boolean).join(' ');
+}
+
+document.querySelector('#today-open').addEventListener('click', async () => {
+  if (!todayRecord) return;
+  try { await send({ type: 'open-record', url: todayRecord.url }); }
+  catch (error) { showError(error); }
+});
+
+for (const [id, choice, message] of [
+  ['today-used', 'used', (record) => `这次用上了。回看进度 ${record.stage}/4。`],
+  ['today-later', 'later', () => '已推到明天，回看进度不变。'],
+  ['today-retire', 'retire', () => '已收入归档，需要时可以找回。'],
+]) {
+  document.querySelector(`#${id}`).addEventListener('click', async () => {
+    if (!todayRecord) return;
+    const buttons = document.querySelectorAll('.today-actions button');
+    buttons.forEach((button) => { button.disabled = true; });
+    try {
+      const result = await send({ type: 'decide-review', normalizedUrl: todayRecord.normalizedUrl, choice });
+      await load(result.changed ? message(result.record) : '这条已不在待回看列表中。');
+    } catch (error) { showError(error); }
+    finally { buttons.forEach((button) => { button.disabled = false; }); }
+  });
 }
 
 searchInput.addEventListener('input', () => {

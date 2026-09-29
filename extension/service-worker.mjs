@@ -1,5 +1,5 @@
 import {
-  addEncounter, advanceRecord, canAddEncounter, consolidateRecords, createRecord, dayKeyFor, inQuietHours, isDue, MAX_STAGE,
+  addEncounter, advanceRecord, canAddEncounter, consolidateRecords, createRecord, dayKeyFor, deferRecord, inQuietHours, isDue, MAX_STAGE,
   mergeByKey, normalizeImportedRecord, normalizeQuietHours, normalizeUrl, quietEndAt, restartRecord, selectNextDue, updateRecordUrl
 } from './domain.mjs';
 
@@ -137,6 +137,12 @@ async function syncDerivedState(records) {
 let lastNotifiedRecord = null;
 let lastNotifiedMany = false;
 
+async function clearDueNotification() {
+  lastNotifiedRecord = null;
+  lastNotifiedMany = false;
+  await chrome.notifications?.clear(DUE_NOTIFICATION_ID)?.catch(() => undefined);
+}
+
 export async function maybeNotifyDue(records = null, now = Date.now()) {
   const settings = await getSettings();
   if (!settings.notifyOnDue) return;
@@ -271,16 +277,32 @@ async function markCurrent(tab) {
   });
 }
 
-async function completeReview(normalizedUrl) {
+async function decideReview(normalizedUrl, choice = 'review') {
+  if (!['review', 'used', 'later', 'retire'].includes(choice)) return { ok: false, error: '无效的回看选择' };
   return enqueueRecordsMutation(async () => {
     const records = await getRecords();
     const index = records.findIndex((record) => record.normalizedUrl === normalizedUrl);
     if (index < 0) return { ok: false, error: '记录不存在' };
-    const result = advanceRecord(records[index]);
+    if (choice === 'retire') {
+      if (!isDue(records[index])) return { ok: true, changed: false, reason: 'not_due', record: records[index] };
+      const retired = addEncounter(records[index], { type: 'retired' });
+      const archived = await getArchivedRecords();
+      const kept = archived.filter((record) => record.normalizedUrl !== normalizedUrl);
+      const remaining = records.filter((_, i) => i !== index);
+      await saveCollections({ [RECORDS_KEY]: remaining, [ARCHIVED_KEY]: [...kept, retired] });
+      await syncDerivedState(remaining);
+      await clearDueNotification();
+      await refreshInjectedPets().catch(() => undefined);
+      return { ok: true, changed: true, archived: true, record: retired };
+    }
+    const result = choice === 'later'
+      ? deferRecord(records[index])
+      : advanceRecord(records[index], Date.now(), choice);
     if (!result.changed) return { ok: true, changed: false, reason: result.reason, record: result.record };
     const next = records.with(index, result.record);
     await saveRecords(next);
     await syncDerivedState(next);
+    await clearDueNotification();
     await refreshInjectedPets().catch(() => undefined);
     return { ok: true, changed: true, record: result.record };
   });
@@ -373,11 +395,21 @@ async function importRecords(rawRecords, rawArchived, rawUnreadable) {
   return enqueueRecordsMutation(async () => {
     const records = consolidateRecords(mergeByKey(await getRecords(), incoming)).records;
     const archived = consolidateRecords(mergeByKey(await getArchivedRecords(), incomingArchived)).records;
+    const activeByKey = new Map(records.map((record) => [record.normalizedUrl, record]));
+    const archivedByKey = new Map(archived.map((record) => [record.normalizedUrl, record]));
+    for (const [key, active] of activeByKey) {
+      const inactive = archivedByKey.get(key);
+      if (!inactive) continue;
+      if (inactive.updatedAt >= active.updatedAt) activeByKey.delete(key);
+      else archivedByKey.delete(key);
+    }
+    const keptRecords = [...activeByKey.values()];
+    const keptArchived = [...archivedByKey.values()];
     const unreadable = [...await getUnreadableRecords(), ...unreadableList];
-    await saveCollections({ [RECORDS_KEY]: records, [ARCHIVED_KEY]: archived, [UNREADABLE_KEY]: unreadable });
-    await syncDerivedState(records);
+    await saveCollections({ [RECORDS_KEY]: keptRecords, [ARCHIVED_KEY]: keptArchived, [UNREADABLE_KEY]: unreadable });
+    await syncDerivedState(keptRecords);
     await refreshInjectedPets().catch(() => undefined);
-    return { ok: true, imported: incoming.length + incomingArchived.length, total: records.length };
+    return { ok: true, imported: incoming.length + incomingArchived.length, total: keptRecords.length };
   });
 }
 
@@ -419,7 +451,7 @@ export async function handleMessage(message) {
     const record = reviewMode ? (dueRecord ?? currentRecord) : currentRecord;
     return {
       ok: true, record, currentRecord, dueRecord,
-      isDue: Boolean(reviewMode && dueRecord),
+      isDue: Boolean(record && isDue(record)),
       canEncounter: Boolean(currentRecord && canAddEncounter(currentRecord)),
       settings,
     };
@@ -466,7 +498,8 @@ export async function handleMessage(message) {
     return { ok: true };
   }
   if (message.type === 'mark-current') return markCurrent(message.tab);
-  if (message.type === 'complete-review') return completeReview(message.normalizedUrl);
+  if (message.type === 'complete-review') return decideReview(message.normalizedUrl);
+  if (message.type === 'decide-review') return decideReview(message.normalizedUrl, message.choice);
   if (message.type === 'restart-journey') return restartJourney(message.normalizedUrl);
   if (message.type === 'remove-record') return removeRecord(message.normalizedUrl);
   if (message.type === 'change-url') return changeUrl(message.normalizedUrl, message.url);

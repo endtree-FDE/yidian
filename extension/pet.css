@@ -38,6 +38,7 @@
 #otter-yidian-card .o-progress i::before { content:""!important; position:absolute!important; inset:0 auto 0 0!important; width:var(--o-progress)!important; border-radius:inherit!important; background:linear-gradient(90deg,var(--mint-light),var(--mint))!important; transition:width .4s ease!important; }
 #otter-yidian-card .o-progress small { grid-column:1 / -1!important; color:#7a8984!important; font-size:10px!important; }
 #otter-yidian-card .o-actions { display:grid!important; grid-template-columns:repeat(3,1fr)!important; column-gap:4px!important; row-gap:5px!important; }
+#otter-yidian-card .o-actions.o-review-actions { grid-template-columns:repeat(2,1fr)!important; }
 #otter-yidian-card button { min-height:38px!important; padding:9px 12px!important; border:0!important; border-radius:12px!important; background:#e8f1ed!important; color:var(--ink)!important; font-size:13px!important; font-weight:750!important; cursor:pointer!important; }
 #otter-yidian-card button.o-primary,#otter-yidian-card button.o-open { grid-column:1 / -1!important; min-height:47px!important; background:var(--ink)!important; color:white!important; font-size:14px!important; font-weight:800!important; letter-spacing:0!important; }
 #otter-yidian-card button.o-primary::before { content:""!important; display:inline-block!important; width:7px!important; height:7px!important; margin-right:9px!important; border-radius:50%!important; background:var(--peach)!important; vertical-align:2px!important; }

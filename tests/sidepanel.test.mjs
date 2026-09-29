@@ -7,7 +7,7 @@ const ids = [
   'progress-card', 'progress-text', 'meter-fill', 'source',
   'document-title', 'status-copy', 'excerpt', 'next-review', 'primary-action',
   'retry', 'open-extensions', 'manage', 'url-input', 'save-url', 'delete-record',
-  'live-status', 'reduced-motion',
+  'live-status', 'reduced-motion', 'review-choices', 'review-later', 'review-retire',
 ];
 let importSequence = 0;
 
@@ -16,7 +16,7 @@ function harnessElement(id) {
   return {
     dataset: {},
     style: {},
-    hidden: ['progress-card', 'primary-action', 'retry', 'open-extensions', 'manage'].includes(id),
+    hidden: ['progress-card', 'primary-action', 'review-choices', 'retry', 'open-extensions', 'manage'].includes(id),
     checked: false,
     disabled: false,
     textContent: '',
@@ -102,11 +102,12 @@ test('四态面板：没有选段时不显示选段块', async () => {
   assert.equal(elements.excerpt.hidden, true);
 });
 
-test('四态面板：到期时给出明确的完成动作', async () => {
+test('四态面板：到期时给出三种处理结果', async () => {
   const record = { ...createRecord({ title: page.title, url: page.url, now }), nextReviewAt: now - 1000 };
   const { elements } = await loadPanel({ context: { mode: 'current', page }, records: [record] });
-  assert.equal(elements['primary-action'].textContent, '完成这次回看');
+  assert.equal(elements['primary-action'].textContent, '用上了');
   assert.equal(elements['primary-action'].hidden, false);
+  assert.equal(elements['review-choices'].hidden, false);
   assert.match(elements['status-copy'].textContent, /已到回看时间/);
 });
 

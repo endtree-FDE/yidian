@@ -11,7 +11,7 @@
   <link rel="icon" href="icon.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20">
+  <link rel="stylesheet" href="styles.css?v=21">
 </head>
 <body>
   <div class="reading-journey" aria-hidden="true">
@@ -96,13 +96,14 @@
 
     <section id="features" class="features">
       <div class="features-heading">
-        <div><p class="section-tag">1.3.2 已经能做什么</p><h2>回看更安静，<br>收藏也更好带走。</h2></div>
-        <p><strong>官网手动版已更新到 1.3.2。</strong>Edge 商店目前仍是 1.0.1，安装最简单、可以自动更新，但功能会少一些。</p>
+        <div><p class="section-tag">1.3.3 已经能做什么</p><h2>今天先看一条，<br>看完自己决定。</h2></div>
+        <p><strong>官网手动版已更新到 1.3.3。</strong>Edge 商店目前仍是 1.0.1，安装最简单、可以自动更新，但功能会少一些。</p>
       </div>
       <div class="features-layout">
         <div class="library-preview" aria-label="我的收藏页面示意">
           <div class="library-title"><span>我的收藏</span><small>本地记录</small></div>
           <div class="library-summary"><div><b>12</b><span>条收藏</span></div><div><b>2</b><span>今天待回看</span></div><div><b>4</b><span>已完成回看计划</span></div></div>
+          <div class="library-today"><small>今天看一条 · 还有 1 条</small><strong>项目复盘里的关键决定</strong><p>打开原网页后，选“用上了”“稍后再看”或“不再需要”。</p><span>打开原网页　·　用上了　·　稍后再看</span></div>
           <article class="library-record due">
             <div><small>途中偶遇 2 次 · 进度仍是 2/4</small><strong>项目复盘里的关键决定</strong><p>你又遇见了它；原来的回看计划一直在继续。</p></div>
             <span class="record-progress"><i class="half"></i></span>
@@ -117,7 +118,7 @@
         <div class="feature-list">
           <article><span>01</span><div><b>收下整页或选段</b><p>保存来源和你主动选中的文字；侧边栏也会先把当初的选段带回来。</p></div></article>
           <article><span>02</span><div><b>第 2、7、30 天再见</b><p>到期数量显示在图标旁；一次只带回一条，不把收藏变成新的积压。</p></div></article>
-          <article><span>03</span><div><b>搜索、归档与统计</b><p>按标题、域名或选段搜索；完成的内容可以归档，只统计已经发生的相见。</p></div></article>
+          <article><span>03</span><div><b>看完自己决定</b><p>“用上了”推进一次回看；“稍后再看”推到明天；“不再需要”收入可恢复的归档。</p></div></article>
           <article><span>04</span><div><b>免打扰与每日摘要</b><p>默认 22:00–08:00 保持安静；多条到期时每天最多发一条摘要通知。</p></div></article>
           <article><span>05</span><div><b>导出 JSON 或 Markdown</b><p>备份可以再导回来；Markdown 带来源、选段与足迹，可直接放进 Obsidian。</p></div></article>
           <article><span>06</span><div><b>无需登录</b><p>不读取未选择的正文，不把收藏记录上传到网络。</p></div></article>
@@ -128,22 +129,22 @@
     <section id="updates" class="updates" aria-labelledby="updates-title">
       <div class="updates-heading">
         <div>
-          <p class="section-tag">1.3.2 更新速览 · 2026-09-29</p>
-          <h2 id="updates-title">这一版，不只换了<br>一个版本号。</h2>
+          <p class="section-tag">1.3.3 更新速览 · 2026-09-30</p>
+          <h2 id="updates-title">今天先见一条，<br>看完再做选择。</h2>
         </div>
         <div class="updates-intro">
-          <p>这一版修复了旧数据影响收藏库的问题，也把解压版的安全更新步骤写清楚了。</p>
+          <p>收藏库先带回一条到期内容。看过后，你可以用上、推迟或归档，原来的收藏和回看进度会保留。</p>
           <a href="changelog.html">查看完整更新记录 →</a>
         </div>
       </div>
       <div class="update-grid">
-        <article><span>更安静</span><h3>多条到期，每天只提醒一次</h3><p>一条时直达原网页，多条时只显示计数并进入收藏库；默认免打扰时段仍是 22:00–08:00。</p></article>
-        <article><span>更好找</span><h3>搜索、归档和统计都在收藏库</h3><p>按标题、域名或选段搜索；完成内容可以归档，只统计真正发生过的收藏与相见。</p></article>
-        <article><span>更好想起</span><h3>回看前，先看到当初的选段</h3><p>侧边栏先带回你保存的那段文字；第一次打开收藏库，也会有一份三十秒上手指引。</p></article>
-        <article><span>更好带走</span><h3>除了备份，也能导出 Markdown</h3><p>每条记录带来源、选段和相见足迹，可直接放进 Obsidian 或其他笔记库。</p></article>
+        <article><span>今天一条</span><h3>打开收藏库就知道先看什么</h3><p>最早到期的一条先出现，附上原网页和当时选中的文字；其他收藏仍在下面。</p></article>
+        <article><span>用上了</span><h3>这次回看记进原来的四步计划</h3><p>进度只前进一步，下次仍按原来的回看节奏安排。</p></article>
+        <article><span>稍后再看</span><h3>推到明天，不补进度</h3><p>今天先放下，记录和选段留在原处，也不会继续算作今天到期。</p></article>
+        <article><span>不再需要</span><h3>收进归档，随时可找回</h3><p>这条不再提醒；历史记录留在本地备份里，需要时可以恢复。</p></article>
       </div>
       <div class="updates-foot">
-        <p><strong>更新记录一直都在。</strong>从 1.0.0 到 1.3.2，每一版做了什么、修了什么，都按日期留下来了。</p>
+        <p><strong>更新记录一直都在。</strong>从 1.0.0 到 1.3.3，每一版做了什么、修了什么，都按日期留下来了。</p>
         <a href="https://github.com/endtree-FDE/yidian" target="_blank" rel="noopener noreferrer">在 GitHub 看项目 ↗</a>
       </div>
     </section>
@@ -171,7 +172,7 @@
       <div class="install-heading">
         <p class="section-tag">两种安装方式</p>
         <h2>先选版本，<br>再照着装。</h2>
-        <p class="install-lead">两张卡片都是浏览器扩展，才能收下当前网页。想省心自动更新，选 Edge 商店；想先用完整新功能，下载官网 1.3.2。</p>
+        <p class="install-lead">两张卡片都是浏览器扩展，才能收下当前网页。想省心自动更新，选 Edge 商店；想先用完整新功能，下载官网 1.3.3。</p>
       </div>
       <div class="install-choices" aria-label="选择安装方式">
         <article class="install-choice recommended">
@@ -182,15 +183,15 @@
         </article>
         <article class="install-choice latest">
           <span>完整新功能 · 手动安装</span>
-          <h3>官网版 1.3.2</h3>
+          <h3>官网版 1.3.3</h3>
           <p>包含搜索归档、免打扰、统计、侧边栏、每日摘要和 Markdown 导出。</p>
-          <a class="secondary" href="yidian-1.3.2.zip" download>下载官网 1.3.2</a>
+          <a class="secondary" href="yidian-1.3.3.zip" download>下载官网 1.3.3</a>
         </article>
       </div>
       <div class="install-guide">
-        <div class="install-guide-heading"><p class="install-guide-label">首次安装官网版</p><h3>下载 1.3.2 后，按这 4 步安装</h3></div>
+        <div class="install-guide-heading"><p class="install-guide-label">首次安装官网版</p><h3>下载 1.3.3 后，按这 4 步安装</h3></div>
         <ol>
-          <li><span>1</span><div><b>下载后先解压</b><p>找到 yidian-1.3.2.zip，右键选择“全部解压”，放进一个以后不会移动的文件夹。</p></div></li>
+          <li><span>1</span><div><b>下载后先解压</b><p>找到 yidian-1.3.3.zip，右键选择“全部解压”，放进一个以后不会移动的文件夹。</p></div></li>
           <li><span>2</span><div><b>打开浏览器的扩展页面</b><p>把 edge://extensions 或 chrome://extensions 粘贴到地址栏，按回车；再打开右上角的“开发者模式”。</p></div></li>
           <li><span>3</span><div><b>选择解压后的文件夹</b><p>点“加载解压缩的扩展”。这里是文件夹选择窗口，ZIP 不会显示；请选择里面直接有 manifest.json 的文件夹。</p></div></li>
           <li class="pin-step"><span>4</span><div><b>让一点留在浏览器右上角</b><p>点浏览器右上角的“扩展”（拼图图标），找到“一点”，再点右侧的图钉。图钉显示为已固定后，一点图标会留在工具栏；以后直接点它收下网页。</p><div class="pin-path" aria-label="固定一点的操作顺序"><span>扩展</span><i>→</i><span>一点</span><i>→</i><strong aria-label="图钉">📌</strong></div></div></li>
@@ -206,11 +207,11 @@
       <details class="web-migration">
         <summary><span>从商店版换过来？</span><strong>把旧收藏一起带过来</strong><i>两版数据各自保存</i></summary>
         <div>
-          <p><b>如果你继续使用 Edge 商店版，这里不用看。</b>商店版会自己更新，收藏也留在原处。改用官网 1.3.2 时，先按下面 3 步迁移本地收藏。</p>
+          <p><b>如果你继续使用 Edge 商店版，这里不用看。</b>商店版会自己更新，收藏也留在原处。改用官网 1.3.3 时，先按下面 3 步迁移本地收藏。</p>
           <ol>
             <li><span>1</span><strong>先在原版导出</strong><small>打开原来的一点，在“我的收藏”里点“导出备份”。</small></li>
-            <li><span>2</span><strong>再打开官网版</strong><small>在扩展页面关闭商店版，打开刚安装的 1.3.2；商店版先别删除。</small></li>
-            <li><span>3</span><strong>把收藏导入回来</strong><small>打开 1.3.2 的“我的收藏”，点“导入备份”。</small></li>
+            <li><span>2</span><strong>再打开官网版</strong><small>在扩展页面关闭商店版，打开刚安装的 1.3.3；商店版先别删除。</small></li>
+            <li><span>3</span><strong>把收藏导入回来</strong><small>打开 1.3.3 的“我的收藏”，点“导入备份”。</small></li>
           </ol>
           <p class="migration-result"><strong>旧收藏回来了，一点还记得你们见过几次。</strong><small>同一网页只保留一条，原来的回看进度和相见足迹都在。</small></p>
         </div>

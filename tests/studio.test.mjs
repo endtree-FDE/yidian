@@ -35,7 +35,7 @@ test('ModelScope Static 创空间入口与卡片配置完整', async () => {
   assert.match(html, /重要的，<br><em>不只见一次。<\/em>/);
   assert.match(html, /<a class="primary" href="#demo">看看怎么用<\/a>/);
   assert.doesNotMatch(html, /<a[^>]+href="#demo"[^>]*>收下一条<\/a>/);
-  assert.match(html, /yidian-1\.3\.2\.zip/);
+  assert.match(html, /yidian-1\.3\.3\.zip/);
   assert.match(html, /不读取未选择的正文，不上传记录，不要求登录/);
   assert.match(html, /id="features"/);
   assert.match(html, /我的收藏/);
@@ -47,24 +47,24 @@ test('ModelScope Static 创空间入口与卡片配置完整', async () => {
   assert.match(html, /到期时，图标旁出现数字。/);
   assert.match(html, /数字表示待回看的收藏数量。不弹窗，不催促；你点开时，一次带回一条。/);
   assert.match(html, /id="updates"/);
-  assert.match(html, /1\.3\.2 更新速览 · 2026-09-29/);
-  assert.match(html, /这一版，不只换了<br>一个版本号。/);
-  assert.match(html, /更安静[\s\S]*更好找[\s\S]*更好想起[\s\S]*更好带走/);
+  assert.match(html, /1\.3\.3 更新速览 · 2026-09-30/);
+  assert.match(html, /今天先见一条，<br>看完再做选择。/);
+  assert.match(html, /今天一条[\s\S]*用上了[\s\S]*稍后再看[\s\S]*不再需要/);
   assert.match(html, /href="changelog\.html">查看完整更新记录 →<\/a>/);
   assert.match(html, /先选版本，<br>再照着装。/);
   assert.match(html, /microsoftedge\.microsoft\.com\/addons\/detail\/mdpemepjnajchhlagfkpggenllebeacd/);
-  assert.match(html, /下载官网 1\.3\.2/);
+  assert.match(html, /下载官网 1\.3\.3/);
   assert.match(html, /途中偶遇 2 次/);
   assert.match(html, /相见足迹示意/);
   assert.match(html, /让一点留在浏览器右上角/);
   assert.match(html, /免打扰与每日摘要/);
   assert.match(html, /把旧收藏一起带过来/);
   assert.match(html, /如果你继续使用 Edge 商店版，这里不用看/);
-  assert.match(html, /改用官网 1\.3\.2/);
+  assert.match(html, /改用官网 1\.3\.3/);
   assert.match(html, /已经装过解压版/);
   assert.match(html, /从商店版换过来/);
   assert.match(html, /推荐给大多数人 · 自动更新/);
-  assert.match(html, /官网手动版已更新到 1\.3\.2/);
+  assert.match(html, /官网手动版已更新到 1\.3\.3/);
   assert.match(html, /Edge 商店目前仍是 1\.0\.1/);
   assert.match(html, /功能会少一些/);
   assert.match(html, /完整新功能 · 手动安装/);
@@ -120,8 +120,11 @@ test('我的收藏用状态、动作和结果解释回看流程', async () => {
     readFile(new URL('extension/library.html', repo), 'utf8'),
     readFile(new URL('extension/library.js', repo), 'utf8'),
   ]);
-  assert.match(html, /点击浏览器工具栏里的“一点”完成回看/);
-  assert.match(html, /下次回看的具体时间/);
+  assert.match(html, /今天看一条/);
+  assert.match(html, /用上了/);
+  assert.match(html, /稍后再看/);
+  assert.match(html, /不再需要/);
+  assert.match(script, /下次回看/);
   assert.match(html, /今天待回看/);
   assert.match(html, /每条内容共 4 步：收下 1 次，再回看 3 次/);
   assert.match(html, /已完成回看计划/);

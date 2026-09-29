@@ -1,6 +1,7 @@
 :root { --ink:#20332d; --green:#28735f; --mint:#78c7ad; --mint-light:#b8e4d4; --paper:#fbf8ef; --white:#fffdf7; --peach:#f28c68; --line:rgba(32,51,45,.15); font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif; color:var(--ink); background:var(--paper); }
 * { box-sizing:border-box; }
 html { scroll-behavior:smooth; }
+section[id] { scroll-margin-top:82px; }
 body { --pointer-x:80%; --pointer-y:8%; margin:0; overflow-x:hidden; background:radial-gradient(circle 25rem at var(--pointer-x) var(--pointer-y),rgba(120,199,173,.2),transparent 72%),var(--paper); background-attachment:fixed; }
 a { color:inherit; text-decoration:none; }
 button { font:inherit; }
@@ -78,6 +79,8 @@ h2 { margin:0; font-size:clamp(34px,5vw,64px); line-height:1.1; letter-spacing:-
 .library-preview { padding:26px; border-radius:26px; background:var(--ink); color:white; box-shadow:0 24px 60px rgba(32,51,45,.17); }
 .library-title { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; } .library-title span { font-size:24px; font-weight:900; } .library-title small { color:var(--mint); }
 .library-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; } .library-summary div { padding:14px; border-radius:15px; background:rgba(255,255,255,.09); } .library-summary b,.library-summary span { display:block; } .library-summary b { font-size:26px; } .library-summary span { color:#cbd8d3; font-size:11px; }
+.library-today { padding:18px; border-left:4px solid #69b59d; border-radius:12px; background:#edf5f0; color:var(--ink); }
+.library-today small,.library-today strong,.library-today span { display:block; } .library-today small { color:var(--green); font-size:11px; font-weight:850; } .library-today strong { margin-top:8px; font-size:16px; } .library-today p { margin:7px 0 11px; color:#62736c; font-size:12px; line-height:1.5; } .library-today span { color:#2e7e69; font-size:11px; font-weight:800; }
 .library-record { display:grid; gap:15px; margin-top:10px; padding:18px; border-radius:18px; background:var(--white); color:var(--ink); } .library-record small,.library-record strong,.library-record p { display:block; } .library-record small { color:var(--green); font-weight:850; } .library-record strong { margin-top:7px; font-size:17px; } .library-record p { margin:7px 0 0; color:#6b7973; font-size:13px; }
 .record-progress .half { width:50%; } .record-progress .three-quarters { width:75%; }
 .record-progress { height:7px; overflow:hidden; border-radius:999px; background:#e4ebe7; } .record-progress i { display:block; height:100%; border-radius:inherit; background:var(--mint); }
