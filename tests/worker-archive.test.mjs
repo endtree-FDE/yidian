@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRecord } from '../extension/domain.mjs';
 
-function chromeMock() {
+function chromeMock({ failWrites = 0 } = {}) {
   const local = {};
   const calls = { alarmCreates: [], alarmClears: [], badges: [] };
   const listeners = {};
+  let writeFailures = failWrites;
   globalThis.chrome = {
     storage: {
       local: {
@@ -15,6 +16,7 @@ function chromeMock() {
         },
         async set(values) {
           await new Promise((resolve) => setTimeout(resolve, 2));
+          if (writeFailures > 0) { writeFailures -= 1; throw new Error('storage unavailable'); }
           Object.assign(local, structuredClone(values));
         },
       },
@@ -77,6 +79,29 @@ test('归档把已完成记录整体移入 archivedRecords，进行中记录留�
   const again = await handleMessage({ type: 'archive-grown' });
   assert.equal(again.archived, 0);
   assert.equal(state.local.archivedRecords.length, 1, '重复归档不产生重复条目');
+});
+
+test('归档写入失败时不先从收藏库移除记录', async () => {
+  const state = chromeMock({ failWrites: 1 });
+  const { handleMessage } = await loadWorker('archive-atomic');
+  state.local.records = [grownRecord('仍在收藏库', 'https://safe.example/1')];
+  await assert.rejects(handleMessage({ type: 'archive-grown' }), /无法保存本地记录/);
+  assert.equal(state.local.records.length, 1);
+  assert.equal(state.local.archivedRecords, undefined);
+});
+
+test('升级时无法读取的旧归档也保留在备份中', async () => {
+  const state = chromeMock();
+  const { handleMessage } = await loadWorker('archive-unreadable');
+  state.local.archivedRecords = { oldFormat: true };
+  await state.listeners.installed();
+  assert.deepEqual(state.local.archivedRecords, []);
+  assert.deepEqual(state.local.unreadableRecords, [
+    { source: 'archivedRecords', record: { oldFormat: true } },
+  ]);
+  const backup = await handleMessage({ type: 'export-backup' });
+  assert.deepEqual(backup.archived, []);
+  assert.deepEqual(backup.unreadable, state.local.unreadableRecords);
 });
 
 test('归档默认不出现在收藏库列表，已归档按最近更新时间排序', async () => {

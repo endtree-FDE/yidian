@@ -75,7 +75,7 @@
   }
   async function send(message) {
     const response = await chrome.runtime.sendMessage(message);
-    if (!response?.ok && response?.error) throw new Error(response.error);
+    if (!response?.ok) throw new Error(response?.error || '操作失败，请重试');
     return response;
   }
   async function load() {
@@ -220,7 +220,7 @@
 
   function roam(now) {
     const systemReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!dragging && card.hidden && now > idleUntil && !state?.settings?.reducedMotion && !systemReduced) {
+    if (!root.hidden && !dragging && card.hidden && now > idleUntil && !state?.settings?.reducedMotion && !systemReduced) {
       x += vx;
       const maxX = Math.max(0, innerWidth - pet.offsetWidth);
       if (x >= maxX || x <= 0) { vx *= -1; x = Math.min(maxX, Math.max(0, x)); }

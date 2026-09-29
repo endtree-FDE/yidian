@@ -163,15 +163,31 @@ export function encounterCount(record) {
 }
 export function consolidateRecords(records) {
   const groups = new Map();
-  let changed = false;
-  for (const record of records) {
+  let changed = !Array.isArray(records) && records !== undefined;
+  const rejected = [];
+  if (!Array.isArray(records) && records !== undefined) rejected.push(records);
+  for (const record of Array.isArray(records) ? records : []) {
+    if (!record || typeof record !== 'object' || Array.isArray(record)) {
+      rejected.push(record);
+      changed = true;
+      continue;
+    }
     const identityUrl = record.canonicalUrl || record.url || record.normalizedUrl;
-    const normalizedUrl = normalizeUrl(identityUrl);
+    let normalizedUrl;
+    let sourceDomainValue;
+    try {
+      normalizedUrl = normalizeUrl(identityUrl);
+      sourceDomainValue = sourceDomain(record.url || identityUrl);
+    } catch {
+      rejected.push(record);
+      changed = true;
+      continue;
+    }
     const normalized = {
       ...record,
       url: record.url || identityUrl,
       normalizedUrl,
-      sourceDomain: sourceDomain(record.url || identityUrl),
+      sourceDomain: sourceDomainValue,
       encounters: encountersFor(record),
     };
     if (record.normalizedUrl !== normalizedUrl || !Array.isArray(record.encounters)) changed = true;
@@ -206,12 +222,22 @@ export function consolidateRecords(records) {
     encounters.splice(0, Math.max(0, encounters.length - MAX_ENCOUNTERS));
     const latestExcerpt = encounters.toReversed().find((event) => event.excerpt)?.excerpt || master.excerpt;
     const masterUrl = master.canonicalUrl || master.url || master.normalizedUrl;
+    let masterNormalizedUrl;
+    let masterSourceDomain;
+    try {
+      masterNormalizedUrl = normalizeUrl(masterUrl);
+      masterSourceDomain = sourceDomain(master.url || masterUrl);
+    } catch {
+      rejected.push(...group);
+      changed = true;
+      continue;
+    }
     merged.push({
       ...master,
       url: master.url || masterUrl,
       excerpt: latestExcerpt,
-      normalizedUrl: normalizeUrl(masterUrl),
-      sourceDomain: sourceDomain(master.url || masterUrl),
+      normalizedUrl: masterNormalizedUrl,
+      sourceDomain: masterSourceDomain,
       createdAt: Math.min(...group.map((record) => Number.isFinite(record.createdAt) ? record.createdAt : 0)),
       updatedAt: Math.max(...group.map((record) => Number.isFinite(record.updatedAt) ? record.updatedAt : 0)),
       encounters,
@@ -221,7 +247,7 @@ export function consolidateRecords(records) {
       mergedCount += group.length - 1;
     }
   }
-  return { records: merged, changed, mergedCount };
+  return { records: merged, changed, mergedCount, rejected };
 }
 
 // 按 normalizedUrl 合并两个记录集，同一键取 updatedAt 更新的一条。

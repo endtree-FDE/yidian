@@ -17,6 +17,7 @@ let activeFilter = 'all';
 let activeQuery = '';
 let currentRecords = [];
 let currentArchived = [];
+let searchTimer = null;
 
 function encountersFor(record) {
   return Array.isArray(record.encounters) ? record.encounters : [];
@@ -158,12 +159,16 @@ async function load(message = '') {
   ]);
   currentArchived = archivedResponse.records;
   render(response.records);
-  status.textContent = message;
+  const unreadable = response.unreadableCount
+    ? `${response.unreadableCount} 条旧数据暂时无法显示；请导出备份并保留。`
+    : '';
+  status.textContent = [message, unreadable].filter(Boolean).join(' ');
 }
 
 searchInput.addEventListener('input', () => {
   activeQuery = searchInput.value;
-  render(currentRecords);
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => render(currentRecords), 150);
 });
 
 archiveButton.addEventListener('click', async () => {
@@ -187,15 +192,13 @@ for (const button of document.querySelectorAll('.filters button')) {
 
 document.querySelector('#export').addEventListener('click', async () => {
   try {
-    const [response, archivedResponse] = await Promise.all([
-      send({ type:'list-records' }),
-      send({ type:'list-archived' }),
-    ]);
+    const response = await send({ type:'export-backup' });
     const payload = {
       version: 2,
       exportedAt: new Date().toISOString(),
       records: response.records,
-      archived: archivedResponse.records,
+      archived: response.archived,
+      ...(response.unreadable.length ? { unreadable: response.unreadable } : {}),
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
     const url = URL.createObjectURL(blob);
@@ -204,9 +207,8 @@ document.querySelector('#export').addEventListener('click', async () => {
     link.download = `yidian-backup-${new Date().toISOString().slice(0,10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    status.textContent = archivedResponse.records.length
-      ? `已导出 ${response.records.length} 份记录（另含 ${archivedResponse.records.length} 份归档）`
-      : `已导出 ${response.records.length} 份记录`;
+    status.textContent = `已导出 ${response.records.length} 份收藏、${response.archived.length} 份归档`
+      + (response.unreadable.length ? `，另保留 ${response.unreadable.length} 条暂无法显示的旧数据` : '');
   } catch (error) { showError(error); }
 });
 
@@ -238,7 +240,10 @@ document.querySelector('#import').addEventListener('change', async (event) => {
   }
   try {
     const payload = JSON.parse(await file.text());
-    const result = await send({ type:'import-records', records:payload.records ?? payload, archived:payload.archived });
+    const result = await send({
+      type:'import-records', records:payload.records ?? payload,
+      archived:payload.archived, unreadable:payload.unreadable,
+    });
     await load(`已带回 ${result.imported} 份记录，现在共有 ${result.total} 份收藏`);
   } catch (error) { showError(error); }
   event.target.value = '';

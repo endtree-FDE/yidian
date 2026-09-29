@@ -6,6 +6,22 @@ const repo = new URL('../', import.meta.url);
 const studio = new URL('../studio/', import.meta.url);
 const read = (file) => readFile(new URL(file, studio), 'utf8');
 
+test('官网、扩展和离线缓存使用同一发布版本', async () => {
+  const [packageFile, manifestFile, html, worker, readme] = await Promise.all([
+    readFile(new URL('package.json', repo), 'utf8'),
+    readFile(new URL('extension/manifest.json', repo), 'utf8'),
+    read('index.html'), read('service-worker.js'), read('README.md'),
+  ]);
+  const version = JSON.parse(packageFile).version;
+  assert.equal(JSON.parse(manifestFile).version, version);
+  assert.ok(html.includes(`href="yidian-${version}.zip"`));
+  assert.ok(html.includes(`官网手动版已更新到 ${version}`));
+  assert.ok(readme.includes(`\`${version}\``));
+  assert.ok(worker.includes(`yidian-site-${version}`));
+  const stylesheet = html.match(/href="(styles\.css\?v=\d+)"/)?.[1];
+  assert.ok(stylesheet && worker.includes(`'./${stylesheet}'`));
+});
+
 test('ModelScope Static 创空间入口与卡片配置完整', async () => {
   const [readme, html] = await Promise.all([read('README.md'), read('index.html')]);
   const frontMatter = readme.replaceAll('\r\n', '\n').match(/^---\n([\s\S]*?)\n---/)?.[1] ?? '';
@@ -19,7 +35,7 @@ test('ModelScope Static 创空间入口与卡片配置完整', async () => {
   assert.match(html, /重要的，<br><em>不只见一次。<\/em>/);
   assert.match(html, /<a class="primary" href="#demo">看看怎么用<\/a>/);
   assert.doesNotMatch(html, /<a[^>]+href="#demo"[^>]*>收下一条<\/a>/);
-  assert.match(html, /yidian-1\.3\.0\.zip/);
+  assert.match(html, /yidian-1\.3\.2\.zip/);
   assert.match(html, /不读取未选择的正文，不上传记录，不要求登录/);
   assert.match(html, /id="features"/);
   assert.match(html, /我的收藏/);
@@ -31,24 +47,24 @@ test('ModelScope Static 创空间入口与卡片配置完整', async () => {
   assert.match(html, /到期时，图标旁出现数字。/);
   assert.match(html, /数字表示待回看的收藏数量。不弹窗，不催促；你点开时，一次带回一条。/);
   assert.match(html, /id="updates"/);
-  assert.match(html, /1\.3\.0 更新速览 · 2026-08-19/);
+  assert.match(html, /1\.3\.2 更新速览 · 2026-09-29/);
   assert.match(html, /这一版，不只换了<br>一个版本号。/);
   assert.match(html, /更安静[\s\S]*更好找[\s\S]*更好想起[\s\S]*更好带走/);
   assert.match(html, /href="changelog\.html">查看完整更新记录 →<\/a>/);
   assert.match(html, /先选版本，<br>再照着装。/);
   assert.match(html, /microsoftedge\.microsoft\.com\/addons\/detail\/mdpemepjnajchhlagfkpggenllebeacd/);
-  assert.match(html, /下载官网 1\.3\.0/);
+  assert.match(html, /下载官网 1\.3\.2/);
   assert.match(html, /途中偶遇 2 次/);
   assert.match(html, /相见足迹示意/);
   assert.match(html, /让一点留在浏览器右上角/);
   assert.match(html, /免打扰与每日摘要/);
   assert.match(html, /把旧收藏一起带过来/);
   assert.match(html, /如果你继续使用 Edge 商店版，这里不用看/);
-  assert.match(html, /只有改用官网 1\.3\.0/);
-  assert.match(html, /以前用过一点/);
-  assert.match(html, /从商店版改用官网 1\.3\.0 时才需要/);
+  assert.match(html, /改用官网 1\.3\.2/);
+  assert.match(html, /已经装过解压版/);
+  assert.match(html, /从商店版换过来/);
   assert.match(html, /推荐给大多数人 · 自动更新/);
-  assert.match(html, /官网手动版已更新到 1\.3\.0/);
+  assert.match(html, /官网手动版已更新到 1\.3\.2/);
   assert.match(html, /Edge 商店目前仍是 1\.0\.1/);
   assert.match(html, /功能会少一些/);
   assert.match(html, /完整新功能 · 手动安装/);
@@ -59,10 +75,11 @@ test('ModelScope Static 创空间入口与卡片配置完整', async () => {
   assert.match(html, /class="pin-path"/);
   assert.match(html, /class="privacy-link" href="privacy\.html">查看完整隐私政策 →<\/a>/);
   assert.match(html, /免费 · 无需登录 · 收藏只在这台电脑里/);
-  assert.match(html, /27,000\+/);
   assert.match(html, /href="contact\.html"/);
   assert.doesNotMatch(html, /Codex|艺术与文化管理研究者|任何浏览器/);
-  await Promise.all(['index.html','contact.html','changelog.html','privacy.html','styles.css','app.js','icon.png','yidian-1.3.0.zip'].map((file) => access(new URL(file, studio))));
+  await Promise.all(['index.html','contact.html','changelog.html','privacy.html','styles.css','app.js','icon.png'].map((file) => access(new URL(file, studio))));
+  assert.match(html, /在原文件夹更新/);
+  assert.match(html, /不要从新文件夹再点“加载解压缩的扩展”/);
 });
 
 test('创空间互动演示含四阶段成长和真实指针拖动', async () => {
@@ -112,7 +129,7 @@ test('我的收藏用状态、动作和结果解释回看流程', async () => {
   assert.match(html, /按关系状态查看/);
   assert.match(html, /相见足迹/);
   assert.match(script, /途中偶遇.*原来的计划一直在继续/);
-  assert.match(html, /只有同时安装“商店版”和“手动版”时/);
+  assert.match(html, /解压版换了文件夹重新加载/);
   assert.match(html, /开启旧版，关闭新版/);
   assert.match(html, /导入会按网页合并/);
   assert.match(script, /进度 \$\{record\.stage\}\/4/);
@@ -138,7 +155,7 @@ test('收藏库提供搜索、已归档筛选与归档动作', async () => {
   assert.match(script, /type:'restore-record'/);
   assert.match(script, /type:'list-archived'/);
   assert.match(script, /type:'set-quiet-hours'/);
-  assert.match(script, /archived: archivedResponse\.records/);
+  assert.match(script, /archived: response\.archived/);
 });
 
 test('GitHub 反馈入口区分使用问题和功能建议', async () => {
