@@ -142,6 +142,9 @@ try {
   assert.equal(await panel.locator('#document-title').innerText(), '一点官网');
   assert.ok(await panel.locator('#next-review').innerText());
   assert.equal(await panel.evaluate(() => document.documentElement.scrollWidth), 410);
+  const collectionTab = context.waitForEvent('page');
+  await panel.getByRole('link', { name: '全部收藏' }).click();
+  assert.match((await collectionTab).url(), /\/library\.html$/);
   const disconnected = await context.newPage();
   await disconnected.addInitScript(() => {
     chrome.runtime.sendMessage = async () => { throw new Error('Could not establish connection. Receiving end does not exist.'); };
@@ -151,6 +154,13 @@ try {
   assert.match(await disconnected.locator('#status').innerText(), /刷新“一点”后重试/);
   assert.equal(await disconnected.locator('.summary-line').isVisible(), false);
   assert.ok(await disconnected.locator('#status').evaluate((element) => element.classList.contains('error')));
+  const backupDownload = disconnected.waitForEvent('download');
+  await disconnected.locator('#export-local').click();
+  const rawBackup = JSON.parse(readFileSync(await (await backupDownload).path(), 'utf8'));
+  assert.equal(rawBackup.records.length, 1);
+  const managerTab = context.waitForEvent('page');
+  await disconnected.locator('#open-extensions').click();
+  assert.match((await managerTab).url(), /^edge:\/\/extensions\//);
   const disconnectedPanel = await context.newPage();
   await disconnectedPanel.setViewportSize({ width: 410, height: 820 });
   await disconnectedPanel.addInitScript(() => {
@@ -161,6 +171,7 @@ try {
   assert.equal(await disconnectedPanel.locator('#document-title').innerText(), '暂时读不到收藏');
   assert.match(await disconnectedPanel.locator('#status-copy').innerText(), /刷新“一点”后重试/);
   assert.equal(await disconnectedPanel.locator('#progress-card').isVisible(), false);
+  assert.equal(await disconnectedPanel.locator('#open-extensions').isVisible(), true);
   console.log('Browser upgrade verified: same folder keeps ID and record; second folder splits storage and shortcut.');
   console.log('Studio verified: four-step demo works and links to the current ZIP.');
   console.log('Extension verified: the pet saves a page, the side panel shows its next review, and a disconnected library shows recovery steps.');

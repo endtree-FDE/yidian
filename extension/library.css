@@ -67,7 +67,9 @@ h1 { margin:0; font-size:clamp(30px,5vw,42px); line-height:1.05; letter-spacing:
 .migration-body .migration-note { color:#394b45; font-weight:700; }
 #status { min-height:22px; margin:0 0 10px; color:#2e7e69; font-size:13px; }
 #status.error { max-width:620px; margin:12px 0; padding:16px 18px; border-left:3px solid #2e7e69; border-radius:0 12px 12px 0; background:#eaf3ed; color:#24342f; font-size:14px; line-height:1.65; }
-#retry-load { margin:0 0 20px; border-color:#2e7e69; background:#2e7e69; color:white; }
+#export-local { margin:0 8px 20px 0; border-color:#2e7e69; background:#2e7e69; color:white; }
+#retry-load { margin:0 0 20px; border-color:#a5cfc0; color:#2e7e69; }
+#open-extensions { margin:0 0 20px 8px; color:#2e7e69; }
 .records { display:grid; gap:10px; }
 .record { display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"copy actions" "progress actions"; align-items:center; gap:10px 18px; padding:16px 18px; border:1px solid #e0e1dc; border-radius:16px; background:#fffdf7; box-shadow:0 6px 18px rgba(36,52,47,.04); }
 .record-copy { grid-area:copy; min-width:0; }

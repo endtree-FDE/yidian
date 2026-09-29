@@ -4,9 +4,9 @@ import { readFile } from 'node:fs/promises';
 import { createRecord, normalizeUrl } from '../extension/domain.mjs';
 
 const ids = [
-  'mode-label', 'progress-card', 'progress-text', 'meter-fill', 'source',
+  'progress-card', 'progress-text', 'meter-fill', 'source',
   'document-title', 'status-copy', 'excerpt', 'next-review', 'primary-action',
-  'retry', 'manage', 'url-input', 'save-url', 'delete-record',
+  'retry', 'open-extensions', 'manage', 'url-input', 'save-url', 'delete-record',
   'live-status', 'reduced-motion',
 ];
 let importSequence = 0;
@@ -16,7 +16,7 @@ function harnessElement(id) {
   return {
     dataset: {},
     style: {},
-    hidden: ['progress-card', 'primary-action', 'retry', 'manage'].includes(id),
+    hidden: ['progress-card', 'primary-action', 'retry', 'open-extensions', 'manage'].includes(id),
     checked: false,
     disabled: false,
     textContent: '',
@@ -75,6 +75,7 @@ test('四态面板：未收下时先显示当前页动作和四步进度', async
   assert.equal(elements['primary-action'].hidden, false);
   assert.equal(elements.manage.hidden, true, '未收下时不显示管理区');
   assert.equal(elements.retry.hidden, true);
+  assert.equal(elements['open-extensions'].hidden, true);
 });
 
 test('四态面板：等待回看时显示下次时间且不催促', async () => {
@@ -136,9 +137,11 @@ test('后台连接失败时不留空白占位，重试后恢复当前页状态',
   assert.match(elements['status-copy'].textContent, /刷新“一点”后重试/);
   assert.equal(elements['primary-action'].hidden, true);
   assert.equal(elements.retry.hidden, false);
+  assert.equal(elements['open-extensions'].hidden, false);
   await elements.retry.dispatch('click');
   assert.equal(elements['document-title'].textContent, page.title);
   assert.equal(elements.retry.hidden, true);
+  assert.equal(elements['open-extensions'].hidden, true);
 });
 
 test('reduced-motion 设置同步到根节点，面板不发网络请求', async () => {
@@ -161,6 +164,7 @@ test('reduced-motion 设置同步到根节点，面板不发网络请求', async
   assert.match(style, /data-reduced-motion="true"/);
   assert.doesNotMatch(html, /id="pet"/);
   assert.match(html, /收下 1 次 · 第 2、7、30 天各回看 1 次/);
+  assert.match(html, /href="library\.html"[^>]*>全部收藏<\/a>/);
 });
 
 test('快捷键 open-side-panel 写入当前页上下文并打开侧边栏', async () => {

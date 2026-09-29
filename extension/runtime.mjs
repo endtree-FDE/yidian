@@ -15,3 +15,8 @@ export async function send(message) {
     throw new Error(explainRuntimeError(error), { cause: error });
   }
 }
+
+export function openExtensions() {
+  const url = navigator.userAgent.includes('Edg/') ? 'edge://extensions/' : 'chrome://extensions/';
+  return chrome.tabs.create({ url });
+}

@@ -1,5 +1,5 @@
 import { matchesRecordQuery, recordsToMarkdown } from './domain.mjs';
-import { explainRuntimeError, send } from './runtime.mjs';
+import { explainRuntimeError, openExtensions, send } from './runtime.mjs';
 
 const recordsRoot = document.querySelector('#records');
 const status = document.querySelector('#status');
@@ -7,7 +7,9 @@ const template = document.querySelector('#record-template');
 const migrationGuide = document.querySelector('#migration-guide');
 const archiveButton = document.querySelector('#archive-grown');
 const searchInput = document.querySelector('#search');
+const exportLocal = document.querySelector('#export-local');
 const retryLoad = document.querySelector('#retry-load');
+const openExtensionsButton = document.querySelector('#open-extensions');
 const { progress, stepCopy } = globalThis.YIDIAN_COPY;
 const reviewTime = new Intl.DateTimeFormat('zh-CN', {
   month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
@@ -155,6 +157,8 @@ function showLoadError(error) {
     document.querySelector(selector).hidden = true;
   }
   retryLoad.hidden = false;
+  exportLocal.hidden = false;
+  openExtensionsButton.hidden = false;
 }
 
 async function load(message = '') {
@@ -169,6 +173,8 @@ async function load(message = '') {
     document.querySelector(selector).hidden = false;
   }
   retryLoad.hidden = true;
+  exportLocal.hidden = true;
+  openExtensionsButton.hidden = true;
   const unreadable = response.unreadableCount
     ? `${response.unreadableCount} 条旧数据暂时无法显示；请导出备份并保留。`
     : '';
@@ -200,25 +206,47 @@ for (const button of document.querySelectorAll('.filters button')) {
   });
 }
 
+function downloadBackup(payload, name = 'backup') {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `yidian-${name}-${new Date().toISOString().slice(0,10)}.json`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 document.querySelector('#export').addEventListener('click', async () => {
   try {
     const response = await send({ type:'export-backup' });
-    const payload = {
+    downloadBackup({
       version: 2,
       exportedAt: new Date().toISOString(),
       records: response.records,
       archived: response.archived,
       ...(response.unreadable.length ? { unreadable: response.unreadable } : {}),
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `yidian-backup-${new Date().toISOString().slice(0,10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    });
     status.textContent = `已导出 ${response.records.length} 份收藏、${response.archived.length} 份归档`
       + (response.unreadable.length ? `，另保留 ${response.unreadable.length} 条暂无法显示的旧数据` : '');
+  } catch (error) { showError(error); }
+});
+
+exportLocal.addEventListener('click', async () => {
+  try {
+    const raw = await chrome.storage.local.get(['records', 'archivedRecords', 'unreadableRecords']);
+    const unreadable = Array.isArray(raw.unreadableRecords)
+      ? [...raw.unreadableRecords]
+      : raw.unreadableRecords === undefined ? [] : [{ source:'unreadableRecords', record:raw.unreadableRecords }];
+    if (raw.records !== undefined && !Array.isArray(raw.records)) unreadable.push({ source:'records', record:raw.records });
+    if (raw.archivedRecords !== undefined && !Array.isArray(raw.archivedRecords)) unreadable.push({ source:'archivedRecords', record:raw.archivedRecords });
+    downloadBackup({
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      records: Array.isArray(raw.records) ? raw.records : [],
+      archived: Array.isArray(raw.archivedRecords) ? raw.archivedRecords : [],
+      ...(unreadable.length ? { unreadable } : {}),
+    }, 'raw-backup');
+    status.textContent = '已导出本机原始备份。先保留这个文件，再刷新扩展。';
   } catch (error) { showError(error); }
 });
 
@@ -243,8 +271,8 @@ document.querySelector('#export-markdown').addEventListener('click', async () =>
 document.querySelector('#import').addEventListener('change', async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
-  if (file.size > 5_000_000) {
-    showError(new Error('备份文件不能超过 5 MB'));
+  if (file.size > 25_000_000) {
+    showError(new Error('备份文件不能超过 25 MB'));
     event.target.value = '';
     return;
   }
@@ -304,4 +332,5 @@ quietEnd.addEventListener('change', saveQuietHours);
 initSettings();
 
 retryLoad.addEventListener('click', () => load().catch(showLoadError));
+openExtensionsButton.addEventListener('click', () => openExtensions().catch(showError));
 load().catch(showLoadError);

@@ -1,11 +1,11 @@
 import { isDue, MAX_STAGE } from './domain.mjs';
-import { explainRuntimeError, send } from './runtime.mjs';
+import { explainRuntimeError, openExtensions, send } from './runtime.mjs';
 
 const elements = Object.fromEntries(
   [
-    'mode-label', 'progress-card', 'progress-text', 'meter-fill', 'source',
+    'progress-card', 'progress-text', 'meter-fill', 'source',
     'document-title', 'status-copy', 'excerpt', 'next-review', 'primary-action',
-    'retry', 'manage', 'url-input', 'save-url', 'delete-record',
+    'retry', 'open-extensions', 'manage', 'url-input', 'save-url', 'delete-record',
     'live-status', 'reduced-motion',
   ].map((id) => [id, document.getElementById(id)]),
 );
@@ -47,6 +47,7 @@ async function loadModel() {
   if (revision !== loadRevision) return;
   model = { page, record, settings, name: stateName(record) };
   elements.retry.hidden = true;
+  elements['open-extensions'].hidden = true;
   elements['live-status'].textContent = '';
   render();
 }
@@ -122,6 +123,7 @@ function showLoadError(error) {
   setVisible(elements['primary-action'], false);
   setVisible(elements.manage, false);
   setVisible(elements.retry, true);
+  setVisible(elements['open-extensions'], true);
 }
 
 async function mutate(message) {
@@ -153,6 +155,7 @@ elements['primary-action'].addEventListener('click', async () => {
 });
 
 elements.retry.addEventListener('click', () => loadModel().catch(showLoadError));
+elements['open-extensions'].addEventListener('click', () => openExtensions().catch(showLoadError));
 
 elements['save-url'].addEventListener('click', async () => {
   await mutate({ type: 'change-url', normalizedUrl: model.record.normalizedUrl, url: elements['url-input'].value });

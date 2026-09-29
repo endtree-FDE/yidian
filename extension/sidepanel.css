@@ -19,18 +19,18 @@ body {
 }
 button, input { font: inherit; }
 button { min-height: 44px; cursor: pointer; }
-button:focus-visible, input:focus-visible, summary:focus-visible {
+button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visible {
   outline: 3px solid rgba(46, 126, 105, .28);
   outline-offset: 3px;
 }
 .app { display: grid; gap: 14px; padding: 20px; }
 .topbar { display: flex; justify-content: space-between; gap: 12px; }
-.eyebrow, .mode-label, .source, footer {
+.eyebrow, .library-link, .source, footer {
   color: var(--muted);
   font-size: 12px;
 }
 .eyebrow { margin: 0; color: var(--mint-dark); font-weight: 850; letter-spacing: .08em; }
-.mode-label { margin: 0; }
+.library-link { color: var(--mint-dark); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .document-card {
   border: 1px solid #d8e2dd;
   border-radius: 18px;
