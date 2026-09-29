@@ -4,7 +4,6 @@ import { explainRuntimeError, openExtensions, send } from './runtime.mjs';
 const recordsRoot = document.querySelector('#records');
 const status = document.querySelector('#status');
 const template = document.querySelector('#record-template');
-const migrationGuide = document.querySelector('#migration-guide');
 const archiveButton = document.querySelector('#archive-grown');
 const searchInput = document.querySelector('#search');
 const exportLocal = document.querySelector('#export-local');
@@ -70,10 +69,6 @@ function render(records) {
   document.querySelector('#encounters').textContent = records.reduce((total, record) => total + encounterCount(record), 0);
   archiveButton.disabled = !records.some((item) => item.stage === 4);
   recordsRoot.replaceChildren();
-  if (!records.length && !archivedView && !migrationGuide.dataset.seen) {
-    migrationGuide.open = true;
-    migrationGuide.dataset.seen = 'true';
-  }
   if (!visibleRecords.length) {
     const empty = document.createElement('div');
     empty.className = 'empty';
@@ -83,16 +78,10 @@ function render(records) {
         : '还没有归档。点“归档已完成”，完成回看计划的收藏会收进这里，随时可以带回来。';
     } else if (!source.length) {
       const strong = document.createElement('strong');
-      strong.textContent = '还没有收藏。三十秒走一遍：';
-      const steps = document.createElement('ol');
-      steps.className = 'empty-steps';
-      steps.innerHTML = '<li>打开任意普通网页，点工具栏里的“一点”；</li><li>在弹出的卡片里点“替我收好”；</li><li>第 2 天，一点会带它回来见你。见过四次，它长成归档——这里不会变成只进不出的坟墓。</li>';
-      const kbdNote = document.createElement('p');
-      kbdNote.className = 'empty-kbd';
-      const kbd = document.createElement('kbd');
-      kbd.textContent = 'Ctrl+Shift+Y';
-      kbdNote.append('快捷键 ', kbd, ' 也能随时收下当前页。');
-      empty.append(strong, steps, kbdNote);
+      strong.textContent = '从一页值得再看的内容开始';
+      const copy = document.createElement('p');
+      copy.textContent = '打开普通网页，点击浏览器右上角的“一点”图标，再点“替我收好”。下次回看时间会出现在这里。';
+      empty.append(strong, copy);
     } else {
       empty.textContent = '这里暂时没有内容。换一个关系状态看看。';
     }
@@ -167,11 +156,19 @@ async function load(message = '') {
     send({ type:'list-archived' }),
   ]);
   currentArchived = archivedResponse.records;
+  const hasAny = response.records.length + currentArchived.length > 0;
+  if (!hasAny) {
+    activeFilter = 'all';
+    for (const button of document.querySelectorAll('.filters button')) {
+      const active = button.dataset.filter === 'all';
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    }
+  }
   render(response.records);
   status.classList.remove('error');
-  for (const selector of ['.tools', '.summary-line', '.toolbar', '.filters', '#records']) {
-    document.querySelector(selector).hidden = false;
-  }
+  for (const selector of ['.tools', '#records']) document.querySelector(selector).hidden = false;
+  for (const selector of ['.summary-line', '.toolbar', '.filters']) document.querySelector(selector).hidden = !hasAny;
   retryLoad.hidden = true;
   exportLocal.hidden = true;
   openExtensionsButton.hidden = true;

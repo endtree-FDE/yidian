@@ -117,6 +117,9 @@ try {
   const webPage = await context.newPage();
   await webPage.goto(`http://127.0.0.1:${siteServer.address().port}/`);
   const extensionPage = await library(injectionId);
+  await extensionPage.getByText('从一页值得再看的内容开始').waitFor({ state: 'visible' });
+  assert.equal(await extensionPage.locator('.filters').isVisible(), false);
+  assert.equal(await extensionPage.locator('#migration-guide').evaluate((element) => element.open), false);
   const tabs = await extensionPage.evaluate(() => chrome.tabs.query({}));
   const current = tabs.find((tab) => tab.url?.startsWith(`http://127.0.0.1:${siteServer.address().port}/`));
   assert.ok(current, 'test page was not visible to the extension');
