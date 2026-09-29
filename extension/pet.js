@@ -15,6 +15,7 @@
   document.documentElement.append(root);
 
   const pet = root.querySelector('#otter-yidian-pet');
+  pet.title = '点击查看这页的收藏和回看；拖动可换位置';
   const card = root.querySelector('#otter-yidian-card');
   const toast = root.querySelector('#otter-yidian-toast');
   const liquid = root.querySelector('#otter-yidian-liquid');

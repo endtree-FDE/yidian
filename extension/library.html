@@ -14,7 +14,7 @@
         <h1>我的收藏</h1>
         <p class="gentle-note">没看完、忘了回看，都没关系。这里不是待办清单，一点只负责把它们轻轻带回来见你。</p>
       </div>
-      <div class="tools" aria-label="记录工具">
+      <div class="tools" aria-label="记录工具" hidden>
         <a class="tool-link" href="stats.html">统计</a>
         <details class="tool-menu">
           <summary>提醒设置</summary>
@@ -51,21 +51,21 @@
       <p class="intro">这里保存你收下的网页和选段。每条内容共 4 步：收下 1 次，再回看 3 次。你可以查看下次回看的具体时间；到期时，点击浏览器工具栏里的“一点”完成回看。</p>
     </details>
 
-    <p class="summary-line" aria-label="收藏概览">
+    <p class="summary-line" aria-label="收藏概览" hidden>
       <span><strong id="total">0</strong>条收藏</span><i aria-hidden="true">·</i>
       <span><strong id="due">0</strong>今天待回看</span><i aria-hidden="true">·</i>
       <span><strong id="complete">0</strong>已完成回看计划</span><i aria-hidden="true">·</i>
       <span><strong id="encounters">0</strong>途中偶遇</span>
     </p>
 
-    <div class="toolbar">
+    <div class="toolbar" hidden>
       <label class="search">
         <input id="search" type="search" placeholder="搜索标题、域名或选段" aria-label="搜索收藏">
       </label>
       <button id="archive-grown" class="archive" type="button" disabled title="把已完成回看计划的收藏收进归档，随时可在“已归档”里找回">归档已完成</button>
     </div>
 
-    <nav class="filters" aria-label="按关系状态查看">
+    <nav class="filters" aria-label="按关系状态查看" hidden>
       <button class="active" type="button" data-filter="all" aria-pressed="true">全部</button>
       <button type="button" data-filter="due" aria-pressed="false">今天要见</button>
       <button type="button" data-filter="active" aria-pressed="false">正在相见</button>
@@ -74,8 +74,9 @@
       <button type="button" data-filter="archived" aria-pressed="false">已归档</button>
     </nav>
 
-    <p id="status" role="status" aria-live="polite"></p>
-    <section id="records" class="records" aria-label="收藏记录"></section>
+    <p id="status" role="status" aria-live="polite">正在读取收藏…</p>
+    <button id="retry-load" type="button" hidden>重新连接</button>
+    <section id="records" class="records" aria-label="收藏记录" hidden></section>
 
     <details id="migration-guide" class="migration-guide">
       <summary>

@@ -129,9 +129,41 @@ try {
   await webPage.locator('[data-action="mark"]').click();
   await webPage.waitForFunction(() => document.querySelector('#otter-yidian-card')?.textContent?.includes('相见 1/4'));
   assert.equal((await extensionPage.evaluate(() => chrome.storage.local.get('records'))).records.length, 1);
+  await extensionPage.evaluate(async ({ windowId, url }) => {
+    await chrome.storage.session.set({
+      [`entryContext:${windowId}`]: { mode: 'current', page: { title: '一点官网', url }, openedAt: Date.now() },
+    });
+  }, { windowId: current.windowId, url: current.url });
+  const panel = await context.newPage();
+  await panel.setViewportSize({ width: 410, height: 820 });
+  await panel.goto(`chrome-extension://${injectionId}/sidepanel.html`);
+  await panel.waitForFunction(() => document.querySelector('#progress-text')?.textContent === '1/4');
+  assert.equal(await panel.locator('#pet').count(), 0);
+  assert.equal(await panel.locator('#document-title').innerText(), '一点官网');
+  assert.ok(await panel.locator('#next-review').innerText());
+  assert.equal(await panel.evaluate(() => document.documentElement.scrollWidth), 410);
+  const disconnected = await context.newPage();
+  await disconnected.addInitScript(() => {
+    chrome.runtime.sendMessage = async () => { throw new Error('Could not establish connection. Receiving end does not exist.'); };
+  });
+  await disconnected.goto(`chrome-extension://${injectionId}/library.html`);
+  await disconnected.locator('#retry-load').waitFor({ state: 'visible' });
+  assert.match(await disconnected.locator('#status').innerText(), /刷新“一点”后重试/);
+  assert.equal(await disconnected.locator('.summary-line').isVisible(), false);
+  assert.ok(await disconnected.locator('#status').evaluate((element) => element.classList.contains('error')));
+  const disconnectedPanel = await context.newPage();
+  await disconnectedPanel.setViewportSize({ width: 410, height: 820 });
+  await disconnectedPanel.addInitScript(() => {
+    chrome.runtime.sendMessage = async () => { throw new Error('Could not establish connection. Receiving end does not exist.'); };
+  });
+  await disconnectedPanel.goto(`chrome-extension://${injectionId}/sidepanel.html`);
+  await disconnectedPanel.locator('#retry').waitFor({ state: 'visible' });
+  assert.equal(await disconnectedPanel.locator('#document-title').innerText(), '暂时读不到收藏');
+  assert.match(await disconnectedPanel.locator('#status-copy').innerText(), /刷新“一点”后重试/);
+  assert.equal(await disconnectedPanel.locator('#progress-card').isVisible(), false);
   console.log('Browser upgrade verified: same folder keeps ID and record; second folder splits storage and shortcut.');
   console.log('Studio verified: four-step demo works and links to the current ZIP.');
-  console.log('Pet verified: the real injection path opens its card and saves a page.');
+  console.log('Extension verified: the pet saves a page, the side panel shows its next review, and a disconnected library shows recovery steps.');
 } finally {
   await context?.close();
   if (siteServer) await new Promise((resolve) => siteServer.close(resolve));

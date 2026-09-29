@@ -25,12 +25,13 @@ $pending = "$destination.pending"
 if (Test-Path -LiteralPath $pending) { Remove-Item -LiteralPath $pending -Force }
 
 try {
-    $files = Get-ChildItem -LiteralPath $extensionPath -Recurse -File
+    $files = Get-ChildItem -LiteralPath $extensionPath -Recurse -File | Sort-Object FullName
     $builder = [System.IO.Compression.ZipFile]::Open($pending, [System.IO.Compression.ZipArchiveMode]::Create)
     try {
         foreach ($file in $files) {
             $entryName = $file.FullName.Substring($extensionPath.Length).TrimStart('\', '/').Replace('\', '/')
             $entry = $builder.CreateEntry($entryName, [System.IO.Compression.CompressionLevel]::Optimal)
+            $entry.LastWriteTime = [System.DateTimeOffset]::new(1980, 1, 1, 0, 0, 0, [System.TimeSpan]::Zero)
             $inputStream = [System.IO.File]::OpenRead($file.FullName)
             $outputStream = $entry.Open()
             try { $inputStream.CopyTo($outputStream) }

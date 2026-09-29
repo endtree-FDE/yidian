@@ -1,5 +1,6 @@
 :root { color-scheme:light; font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif; color:#24342f; background:#f7f5ef; }
 * { box-sizing:border-box; }
+[hidden] { display:none!important; }
 body { margin:0; }
 button,.button { min-height:42px; padding:10px 16px; border:1px solid #d9ddd9; border-radius:13px; background:#fffdf7; color:#24342f; font:700 14px/1 inherit; cursor:pointer; }
 button:hover,.button:hover { border-color:#69b59d; }
@@ -65,6 +66,8 @@ h1 { margin:0; font-size:clamp(30px,5vw,42px); line-height:1.05; letter-spacing:
 .migration-path small { margin-top:6px; color:#74827c; font-size:11px; line-height:1.5; }
 .migration-body .migration-note { color:#394b45; font-weight:700; }
 #status { min-height:22px; margin:0 0 10px; color:#2e7e69; font-size:13px; }
+#status.error { max-width:620px; margin:12px 0; padding:16px 18px; border-left:3px solid #2e7e69; border-radius:0 12px 12px 0; background:#eaf3ed; color:#24342f; font-size:14px; line-height:1.65; }
+#retry-load { margin:0 0 20px; border-color:#2e7e69; background:#2e7e69; color:white; }
 .records { display:grid; gap:10px; }
 .record { display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"copy actions" "progress actions"; align-items:center; gap:10px 18px; padding:16px 18px; border:1px solid #e0e1dc; border-radius:16px; background:#fffdf7; box-shadow:0 6px 18px rgba(36,52,47,.04); }
 .record-copy { grid-area:copy; min-width:0; }

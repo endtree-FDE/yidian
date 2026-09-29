@@ -13,29 +13,19 @@
         <p id="mode-label" class="mode-label">当前网页</p>
       </header>
 
-      <section class="companion-card" aria-labelledby="document-title">
-        <div id="pet" class="pet" data-stage="0" aria-hidden="true">
-          <div class="pet-liquid"></div>
-          <div class="pet-face"><i></i><i></i><span></span></div>
-        </div>
-        <p class="meter-label">这份收藏的成长</p>
-        <p id="progress-text" class="progress-text">还没有开始</p>
-        <div class="meter" aria-hidden="true"><span id="meter-fill"></span></div>
-      </section>
-
       <section class="document-card">
         <p id="source" class="source"></p>
-        <h1 id="document-title">正在看看这一页…</h1>
-        <p id="status-copy" class="status-copy"></p>
+        <h1 id="document-title">正在连接一点…</h1>
+        <p id="status-copy" class="status-copy">这里会显示当前网页的收藏状态和下次回看时间。</p>
         <p id="excerpt" class="excerpt" hidden></p>
         <p id="next-review" class="next-review"></p>
 
         <div class="actions">
-          <button id="primary-action" type="button"></button>
-          <button id="open-original" class="secondary" type="button">打开原网页</button>
+          <button id="primary-action" type="button" hidden></button>
+          <button id="retry" class="secondary" type="button" hidden>重新连接</button>
         </div>
 
-        <details id="manage">
+        <details id="manage" hidden>
           <summary>管理这条记录</summary>
           <label for="url-input">原网页链接</label>
           <input id="url-input" type="url" inputmode="url">
@@ -46,6 +36,12 @@
         </details>
       </section>
 
+      <section id="progress-card" class="progress-card" aria-label="这页的回看进度" hidden>
+        <div class="progress-heading"><span>这页的回看进度</span><strong id="progress-text">0/4</strong></div>
+        <div class="meter" aria-hidden="true"><span id="meter-fill"></span></div>
+        <p class="progress-steps">收下 1 次 · 第 2、7、30 天各回看 1 次</p>
+      </section>
+
       <p id="live-status" role="status" aria-live="polite"></p>
 
       <footer>
@@ -53,7 +49,7 @@
           <input id="reduced-motion" type="checkbox">
           减少动态效果
         </label>
-        <p class="local-note">只保存在本机；工具栏的一点仍是主入口，这里是安静的侧窗。</p>
+        <p class="local-note">收藏只保存在这台电脑。工具栏图标用于在网页上唤出一点。</p>
       </footer>
     </main>
     <script type="module" src="sidepanel.mjs"></script>

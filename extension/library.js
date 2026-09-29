@@ -1,4 +1,5 @@
 import { matchesRecordQuery, recordsToMarkdown } from './domain.mjs';
+import { explainRuntimeError, send } from './runtime.mjs';
 
 const recordsRoot = document.querySelector('#records');
 const status = document.querySelector('#status');
@@ -6,6 +7,7 @@ const template = document.querySelector('#record-template');
 const migrationGuide = document.querySelector('#migration-guide');
 const archiveButton = document.querySelector('#archive-grown');
 const searchInput = document.querySelector('#search');
+const retryLoad = document.querySelector('#retry-load');
 const { progress, stepCopy } = globalThis.YIDIAN_COPY;
 const reviewTime = new Intl.DateTimeFormat('zh-CN', {
   month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
@@ -41,12 +43,6 @@ function matchesFilter(record, now) {
   if (activeFilter === 'encountered') return encounterCount(record) > 0;
   if (activeFilter === 'complete') return record.stage === 4;
   return true;
-}
-
-async function send(message) {
-  const response = await chrome.runtime.sendMessage(message);
-  if (!response?.ok) throw new Error(response?.error || '操作失败，请重试');
-  return response;
 }
 
 function stateLabel(record, now = Date.now()) {
@@ -150,7 +146,16 @@ function render(records) {
   }
 }
 
-function showError(error) { status.textContent = error.message || '操作失败，请重试'; }
+function showError(error) { status.textContent = explainRuntimeError(error); }
+
+function showLoadError(error) {
+  showError(error);
+  status.classList.add('error');
+  for (const selector of ['.tools', '.summary-line', '.toolbar', '.filters', '#records']) {
+    document.querySelector(selector).hidden = true;
+  }
+  retryLoad.hidden = false;
+}
 
 async function load(message = '') {
   const [response, archivedResponse] = await Promise.all([
@@ -159,6 +164,11 @@ async function load(message = '') {
   ]);
   currentArchived = archivedResponse.records;
   render(response.records);
+  status.classList.remove('error');
+  for (const selector of ['.tools', '.summary-line', '.toolbar', '.filters', '#records']) {
+    document.querySelector(selector).hidden = false;
+  }
+  retryLoad.hidden = true;
   const unreadable = response.unreadableCount
     ? `${response.unreadableCount} 条旧数据暂时无法显示；请导出备份并保留。`
     : '';
@@ -293,4 +303,5 @@ quietStart.addEventListener('change', saveQuietHours);
 quietEnd.addEventListener('change', saveQuietHours);
 initSettings();
 
-load().catch(showError);
+retryLoad.addEventListener('click', () => load().catch(showLoadError));
+load().catch(showLoadError);

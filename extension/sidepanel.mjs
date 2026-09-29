@@ -1,10 +1,11 @@
 import { isDue, MAX_STAGE } from './domain.mjs';
+import { explainRuntimeError, send } from './runtime.mjs';
 
 const elements = Object.fromEntries(
   [
-    'mode-label', 'pet', 'progress-text', 'meter-fill', 'source',
+    'mode-label', 'progress-card', 'progress-text', 'meter-fill', 'source',
     'document-title', 'status-copy', 'excerpt', 'next-review', 'primary-action',
-    'open-original', 'manage', 'url-input', 'save-url', 'delete-record',
+    'retry', 'manage', 'url-input', 'save-url', 'delete-record',
     'live-status', 'reduced-motion',
   ].map((id) => [id, document.getElementById(id)]),
 );
@@ -18,12 +19,6 @@ let busy = false;
 let loadRevision = 0;
 const panelWindowId = (await chrome.windows.getCurrent()).id;
 const entryKey = `entryContext:${panelWindowId}`;
-
-async function send(message) {
-  const response = await chrome.runtime.sendMessage(message);
-  if (!response?.ok) throw new Error(response?.error || '操作失败，请重试');
-  return response;
-}
 
 async function readEntryContext() {
   const result = await chrome.storage.session.get(entryKey);
@@ -51,6 +46,8 @@ async function loadModel() {
   }
   if (revision !== loadRevision) return;
   model = { page, record, settings, name: stateName(record) };
+  elements.retry.hidden = true;
+  elements['live-status'].textContent = '';
   render();
 }
 
@@ -62,20 +59,18 @@ function render() {
   const { page, record, settings, name } = model;
   const stage = record?.stage ?? 0;
 
-  elements.pet.dataset.stage = String(stage);
-  elements['progress-text'].textContent =
-    stage === 0 ? '还没有开始' : `${stage * 25}% · 第 ${stage} 次见面`;
+  elements['progress-text'].textContent = `${stage}/4`;
   elements['meter-fill'].style.width = `${stage * 25}%`;
-  elements.source.textContent = record?.sourceDomain ?? '';
+  setVisible(elements['progress-card'], Boolean(page));
+  elements.source.textContent = record?.sourceDomain ?? (page?.url ? new URL(page.url).hostname : '');
   elements['document-title'].textContent =
-    page?.title || record?.title || '这里还不能收下';
+    page?.title || record?.title || '请先打开一个网页';
   elements['reduced-motion'].checked = Boolean(settings.reducedMotion);
   document.documentElement.dataset.reducedMotion = settings.reducedMotion ? 'true' : 'false';
   setVisible(elements.manage, Boolean(record));
-  setVisible(elements['open-original'], Boolean(record || page));
 
   if (!page && !record) {
-    elements['status-copy'].textContent = '请在普通网页中打开侧边栏，一点才能看见它。';
+    elements['status-copy'].textContent = '请先打开普通网页，再用快捷键打开侧边栏。';
     elements['next-review'].textContent = '';
     setVisible(elements['primary-action'], false);
     return;
@@ -85,24 +80,24 @@ function render() {
 
   const views = {
     unmarked: {
-      copy: '今天愿意见它一面吗？收下来，一点会替你记得再见它。',
+      copy: '这页还没收藏。收下后，第 2、7、30 天各回来一次。',
       next: '',
       action: '收下这条',
     },
     waiting: {
-      copy: '不用惦记，一点会在合适的时候轻轻提醒你。',
+      copy: '已经收下，等待下一次回看。',
       next: record
         ? `下次回看：${reviewTime.format(new Date(record.nextReviewAt))}`
         : '',
       action: '',
     },
     due: {
-      copy: '它没有迟到，也没有催你。现在想再见它一面吗？',
+      copy: '这页已到回看时间。看过后，可以完成这次回看。',
       next: '',
-      action: '见一面',
+      action: '完成这次回看',
     },
     grown: {
-      copy: '三次回看已经完成。它长成了，不再自动提醒。',
+      copy: '三次回看已完成，不再自动提醒。',
       next: '',
       action: '',
     },
@@ -117,6 +112,18 @@ function render() {
   setVisible(elements['primary-action'], Boolean(views.action));
 }
 
+function showLoadError(error) {
+  model = null;
+  elements.source.textContent = '';
+  elements['document-title'].textContent = '暂时读不到收藏';
+  elements['status-copy'].textContent = explainRuntimeError(error);
+  elements['next-review'].textContent = '';
+  setVisible(elements['progress-card'], false);
+  setVisible(elements['primary-action'], false);
+  setVisible(elements.manage, false);
+  setVisible(elements.retry, true);
+}
+
 async function mutate(message) {
   if (busy) return null;
   busy = true;
@@ -127,7 +134,7 @@ async function mutate(message) {
     await loadModel();
     return response;
   } catch (error) {
-    elements['live-status'].textContent = error.message;
+    elements['live-status'].textContent = explainRuntimeError(error);
     return null;
   } finally {
     busy = false;
@@ -145,10 +152,7 @@ elements['primary-action'].addEventListener('click', async () => {
   }
 });
 
-elements['open-original'].addEventListener('click', () => {
-  const url = model.record?.url ?? model.page?.url;
-  if (url) chrome.tabs.create({ url });
-});
+elements.retry.addEventListener('click', () => loadModel().catch(showLoadError));
 
 elements['save-url'].addEventListener('click', async () => {
   await mutate({ type: 'change-url', normalizedUrl: model.record.normalizedUrl, url: elements['url-input'].value });
@@ -168,7 +172,7 @@ elements['reduced-motion'].addEventListener('change', async () => {
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName !== 'session' || !changes[entryKey]) return;
-  loadModel();
+  loadModel().catch(showLoadError);
 });
 
-await loadModel();
+await loadModel().catch(showLoadError);
