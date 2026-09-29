@@ -33,7 +33,8 @@ async function loadPanel({
   sendMessage,
 } = {}) {
   const elements = Object.fromEntries(ids.map((id) => [id, harnessElement(id)]));
-  const state = { context, records, settings };
+  const state = { context, records, settings, activeTabId: context?.tabId ?? null };
+  const listeners = {};
   const defaultSendMessage = async (message) => {
     if (message.type === 'get-pet-state') {
       const normalized = normalizeUrl(message.page.canonicalUrl || message.page.url);
@@ -55,12 +56,17 @@ async function loadPanel({
       onChanged: { addListener() {} },
     },
     runtime: { sendMessage: sendMessage ?? defaultSendMessage },
-    tabs: { create() {} },
+    tabs: {
+      create() {},
+      async query() { return [{ id: state.activeTabId }]; },
+      onActivated: { addListener(fn) { listeners.activated = fn; } },
+      onUpdated: { addListener(fn) { listeners.updated = fn; } },
+    },
   };
 
   importSequence += 1;
   await import(`../extension/sidepanel.mjs?test=${importSequence}`);
-  return { elements, state };
+  return { elements, state, listeners };
 }
 
 const page = { title: '想见的一页', url: 'https://example.com/doc' };
@@ -144,6 +150,20 @@ test('后台连接失败时不留空白占位，重试后恢复当前页状态',
   assert.equal(elements['open-extensions'].hidden, true);
 });
 
+test('切换标签或导航后停用旧网页动作', async () => {
+  const { elements, state, listeners } = await loadPanel({ context: { mode: 'current', page, tabId: 11 } });
+  assert.equal(elements['primary-action'].hidden, false);
+  state.activeTabId = 12;
+  listeners.activated({ tabId: 12, windowId: 7 });
+  assert.equal(elements['primary-action'].hidden, true);
+  assert.match(elements['status-copy'].textContent, /再按 Alt\+Shift\+Y 更新/);
+  await elements['primary-action'].dispatch('click');
+  state.activeTabId = 11;
+  listeners.updated(11, { status: 'loading' });
+  listeners.activated({ tabId: 11, windowId: 7 });
+  assert.equal(elements['primary-action'].hidden, true, '页面导航后不能恢复旧网页动作');
+});
+
 test('reduced-motion 设置同步到根节点，面板不发网络请求', async () => {
   const { elements } = await loadPanel({
     context: { mode: 'current', page },
@@ -201,6 +221,7 @@ test('快捷键 open-side-panel 写入当前页上下文并打开侧边栏', asy
   const context = session['entryContext:5'];
   assert.equal(context.mode, 'current');
   assert.deepEqual(context.page, { title: '当前页', url: 'https://a.example/doc' });
+  assert.equal(context.tabId, 3);
   assert.equal(typeof context.openedAt, 'number');
   assert.deepEqual(calls.panelOpens, [{ windowId: 5 }]);
 });

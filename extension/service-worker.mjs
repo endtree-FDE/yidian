@@ -491,7 +491,7 @@ async function openSidePanel(tab) {
   if (!Number.isInteger(tab?.windowId)) return;
   const page = tab.url && isWebUrl(tab.url) ? { title: tab.title ?? '', url: tab.url } : null;
   await chrome.storage.session.set({
-    [`entryContext:${tab.windowId}`]: { mode: 'current', page, openedAt: Date.now() },
+    [`entryContext:${tab.windowId}`]: { mode: 'current', page, tabId: tab.id, openedAt: Date.now() },
   });
   await chrome.sidePanel.open({ windowId: tab.windowId });
 }

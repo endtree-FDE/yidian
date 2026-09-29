@@ -45,7 +45,7 @@ async function loadModel() {
     settings = (await send({ type: 'get-settings' })).settings;
   }
   if (revision !== loadRevision) return;
-  model = { page, record, settings, name: stateName(record) };
+  model = { page, record, settings, tabId: context?.tabId ?? null, name: stateName(record) };
   elements.retry.hidden = true;
   elements['open-extensions'].hidden = true;
   elements['live-status'].textContent = '';
@@ -126,6 +126,25 @@ function showLoadError(error) {
   setVisible(elements['open-extensions'], true);
 }
 
+function showStalePage(reason = 'tab-switch') {
+  if (!model || (model.stale && reason !== 'navigation')) return;
+  model.stale = true;
+  model.staleReason = reason;
+  elements['status-copy'].textContent = '页面已切换或重新加载。再按 Alt+Shift+Y 更新这里。';
+  elements['next-review'].textContent = '';
+  setVisible(elements['primary-action'], false);
+  setVisible(elements['progress-card'], false);
+  setVisible(elements.manage, false);
+}
+
+async function currentPageIsActive() {
+  if (!Number.isInteger(model?.tabId)) return true;
+  const [active] = await chrome.tabs.query({ active: true, windowId: panelWindowId });
+  if (active?.id === model.tabId && !model.stale) return true;
+  showStalePage();
+  return false;
+}
+
 async function mutate(message) {
   if (busy) return null;
   busy = true;
@@ -145,6 +164,7 @@ async function mutate(message) {
 }
 
 elements['primary-action'].addEventListener('click', async () => {
+  if (!await currentPageIsActive()) return;
   if (model.name === 'unmarked') {
     const response = await mutate({ type: 'mark-current', tab: model.page });
     if (response?.created) elements['live-status'].textContent = '收下了。第 2 天一点会带它回来。';
@@ -176,6 +196,16 @@ elements['reduced-motion'].addEventListener('change', async () => {
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName !== 'session' || !changes[entryKey]) return;
   loadModel().catch(showLoadError);
+});
+chrome.tabs.onActivated?.addListener(({ tabId, windowId }) => {
+  if (windowId !== panelWindowId || !Number.isInteger(model?.tabId)) return;
+  if (tabId === model.tabId) {
+    if (model.staleReason === 'tab-switch') loadModel().catch(showLoadError);
+  } else showStalePage();
+});
+chrome.tabs.onUpdated?.addListener((tabId, changeInfo) => {
+  if (tabId === model?.tabId && (changeInfo.status === 'loading'
+    || (changeInfo.url && changeInfo.url !== model.page?.url))) showStalePage('navigation');
 });
 
 await loadModel().catch(showLoadError);
