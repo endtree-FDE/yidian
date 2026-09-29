@@ -21,6 +21,7 @@ let activeQuery = '';
 let currentRecords = [];
 let currentArchived = [];
 let searchTimer = null;
+let loadRevision = 0;
 
 function encountersFor(record) {
   return Array.isArray(record.encounters) ? record.encounters : [];
@@ -151,10 +152,19 @@ function showLoadError(error) {
 }
 
 async function load(message = '') {
-  const [response, archivedResponse] = await Promise.all([
-    send({ type:'list-records' }),
-    send({ type:'list-archived' }),
-  ]);
+  const revision = ++loadRevision;
+  let response;
+  let archivedResponse;
+  try {
+    [response, archivedResponse] = await Promise.all([
+      send({ type:'list-records' }),
+      send({ type:'list-archived' }),
+    ]);
+  } catch (error) {
+    if (revision === loadRevision) throw error;
+    return;
+  }
+  if (revision !== loadRevision) return;
   currentArchived = archivedResponse.records;
   const hasAny = response.records.length + currentArchived.length > 0;
   if (!hasAny) {
@@ -330,4 +340,9 @@ initSettings();
 
 retryLoad.addEventListener('click', () => load().catch(showLoadError));
 openExtensionsButton.addEventListener('click', () => openExtensions().catch(showError));
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local' && ['records', 'archivedRecords', 'unreadableRecords'].some((key) => key in changes)) {
+    load().catch(showLoadError);
+  }
+});
 load().catch(showLoadError);

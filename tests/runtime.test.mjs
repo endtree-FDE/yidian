@@ -8,6 +8,7 @@ test('连接失败转成可操作的中文提示', async () => {
   };
   await assert.rejects(send({ type: 'list-records' }), /确认解压文件夹还在原处/);
   assert.equal(explainRuntimeError(new Error('记录不存在')), '记录不存在');
+  assert.match(explainRuntimeError(new Error("Cannot read properties of null (reading 'canonicalUrl')")), /旧版后台/);
 });
 
 test('恢复入口打开当前浏览器的扩展管理页', async () => {

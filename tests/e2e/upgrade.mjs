@@ -60,6 +60,14 @@ try {
   }));
   assert.equal(marked.ok, true);
   assert.equal((await page.evaluate(() => chrome.storage.local.get('records'))).records.length, 1);
+  await page.evaluate(async () => {
+    const { records } = await chrome.storage.local.get('records');
+    await chrome.storage.local.set({ records: [
+      ...records,
+      null,
+      { title: '旧版无法识别的本地文档', url: 'file:///old-note' },
+    ] });
+  });
   await context.close();
   context = undefined;
 
@@ -68,8 +76,17 @@ try {
   assert.equal(ids()[0], originalId, 'updating the same folder changed the extension ID');
   page = await library(originalId);
   assert.equal(await page.evaluate(() => chrome.runtime.getManifest().version), '1.3.2');
-  assert.equal((await page.evaluate(() => chrome.storage.local.get('records'))).records.length, 1);
+  await page.evaluate(() => chrome.runtime.reload());
+  page = await library(originalId);
+  await page.waitForFunction(async () => {
+    const data = await chrome.storage.local.get(['records', 'unreadableRecords']);
+    return data.records?.length === 1 && data.unreadableRecords?.length === 2;
+  });
+  await page.waitForFunction(() => document.querySelector('#total')?.textContent === '1', null, { timeout: 5_000 });
   assert.equal(await page.locator('#total').innerText(), '1');
+  const migrated = await page.evaluate(() => chrome.runtime.sendMessage({ type: 'export-backup' }));
+  assert.equal(migrated.records.length, 1);
+  assert.deepEqual(migrated.unreadable.map(({ record }) => record?.url ?? null), [null, 'file:///old-note']);
   await context.close();
   context = undefined;
 
