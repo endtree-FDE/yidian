@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { access, readFile } from 'node:fs/promises';
+import { isDue, normalizeImportedRecord } from '../extension/domain.mjs';
 
 const repo = new URL('../', import.meta.url);
 const studio = new URL('../studio/', import.meta.url);
@@ -20,6 +21,14 @@ test('官网、扩展和离线缓存使用同一发布版本', async () => {
   assert.ok(worker.includes(`yidian-site-${version}`));
   const stylesheet = html.match(/href="(styles\.css\?v=\d+)"/)?.[1];
   assert.ok(stylesheet && worker.includes(`'./${stylesheet}'`));
+});
+
+test('Edge 审核示例备份可立即导入并显示到期回看', async () => {
+  const payload = JSON.parse(await read('edge-review-sample.json'));
+  assert.equal(payload.records.length, 1);
+  const record = normalizeImportedRecord(payload.records[0]);
+  assert.equal(isDue(record), true);
+  assert.equal(record.url, 'https://example.com/');
 });
 
 test('ModelScope Static 创空间入口与卡片配置完整', async () => {
