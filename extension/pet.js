@@ -215,7 +215,11 @@
     if (!card.hidden && !root.contains(event.target)) card.hidden = true;
   });
   addEventListener('resize', setPosition);
-  chrome.runtime.onMessage.addListener((message) => {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message.type === 'get-page-context') {
+      sendResponse(page());
+      return;
+    }
     if (message.type === 'show-pet') {
       mode = message.mode === 'review' ? 'review' : 'current';
       root.hidden = false;

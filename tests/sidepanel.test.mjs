@@ -29,6 +29,7 @@ function harnessElement(id) {
 async function loadPanel({
   context = null,
   activeTab = null,
+  pageFromPet = null,
   records = [],
   settings = { reducedMotion: false },
   sendMessage,
@@ -60,6 +61,7 @@ async function loadPanel({
     tabs: {
       create() {},
       async query() { return [activeTab ?? { id: state.activeTabId }]; },
+      async sendMessage() { return pageFromPet; },
       onActivated: { addListener(fn) { listeners.activated = fn; } },
       onUpdated: { addListener(fn) { listeners.updated = fn; } },
     },
@@ -87,6 +89,23 @@ test('活动网页暂未授权时，侧边栏说明如何连接当前页', async
   const { elements } = await loadPanel({ activeTab: { id: 41, windowId: 7 } });
   assert.equal(elements['document-title'].textContent, '暂时读不到当前网页');
   assert.match(elements['status-copy'].textContent, /点工具栏里的“一点”/);
+});
+
+test('活动标签网址不可见时，从已唤出的宠物取得当前网页', async () => {
+  const record = createRecord({ title: page.title, url: page.url, now });
+  const { elements } = await loadPanel({
+    activeTab: { id: 41, windowId: 7 }, pageFromPet: page, records: [record],
+  });
+  assert.equal(elements['document-title'].textContent, page.title);
+  assert.equal(elements['progress-text'].textContent, '1/4');
+});
+
+test('切换到另一标签且网址不可见时，不显示上一页的记录', async () => {
+  const { elements } = await loadPanel({
+    context: { tabId: 40, page }, activeTab: { id: 41, windowId: 7 },
+  });
+  assert.equal(elements['document-title'].textContent, '暂时读不到当前网页');
+  assert.equal(elements['progress-card'].hidden, true);
 });
 
 test('四态面板：未收下时先显示当前页动作和四步进度', async () => {

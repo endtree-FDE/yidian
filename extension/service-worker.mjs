@@ -527,6 +527,13 @@ async function rememberPanelContext(tab) {
   });
 }
 
+async function forgetPanelContext(tabId, tab) {
+  if (!Number.isInteger(tab?.windowId) || !chrome.storage.session?.get) return;
+  const key = `entryContext:${tab.windowId}`;
+  const current = (await chrome.storage.session.get(key))[key];
+  if (current?.tabId === tabId) await chrome.storage.session.remove(key);
+}
+
 // sidePanel.open 必须留在用户手势调用栈里。
 async function openSidePanel(tab) {
   if (!Number.isInteger(tab?.windowId)) return;
@@ -571,8 +578,11 @@ if (globalThis.chrome?.runtime?.onMessage) {
   chrome.storage.onChanged.addListener((_changes, areaName) => {
     if (areaName === 'local') requestBadgeRefresh();
   });
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-    if (changeInfo.status === 'loading') clearTabInjectionError(tabId);
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'loading' || changeInfo.url) {
+      clearTabInjectionError(tabId);
+      forgetPanelContext(tabId, tab).catch(() => undefined);
+    }
   });
   chrome.action.onClicked.addListener((tab) => {
     handleToolbarClick(tab).catch((error) => console.warn('yidian pet injection failed', error));

@@ -321,6 +321,15 @@ test('工具栏 show-pet 消息会直接打开收藏卡片', async () => {
   assert.doesNotMatch(harness.hook.card.innerHTML, /完成 25%/);
 });
 
+test('侧边栏可向已注入的宠物读取当前网页身份', async () => {
+  const harness = createHarness();
+  await harness.flush();
+  let context;
+  harness.runtimeListeners[0]({ type: 'get-page-context' }, null, (value) => { context = value; });
+  assert.equal(context.url, harness.location.href);
+  assert.equal(context.title, harness.document.title);
+});
+
 test('到期卡片明确显示状态、进度和完成动作', async () => {
   const harness = createHarness({ record, due: true });
   await harness.flush();

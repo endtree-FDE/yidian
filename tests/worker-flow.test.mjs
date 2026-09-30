@@ -24,6 +24,7 @@ function chromeMock({ failWrites = 0, missingReceiverOnce = false, injectionErro
       session: {
         async get(key) { return { [key]: structuredClone(session[key]) }; },
         async set(values) { Object.assign(session, structuredClone(values)); },
+        async remove(key) { delete session[key]; },
       },
       onChanged: { addListener(fn) { listeners.storage = fn; } },
     },
@@ -319,6 +320,10 @@ test('工具栏有到期记录时显示回访，快捷键始终显示当前页�
   assert.equal(state.calls.messages.at(-1).message.mode, 'current');
   assert.equal(state.calls.messages.at(-1).tabId, tabB.id);
   assert.equal(state.session['entryContext:2'].page.url, tabB.url);
+  state.listeners.tabUpdated(tabA.id, { status: 'loading' }, tabA);
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(state.session['entryContext:1'], undefined, '导航后不留下上一页上下文');
+  assert.equal(state.session['entryContext:2'].page.url, tabB.url, '别的标签导航不清掉当前上下文');
 });
 
 test('活跃宠物响应消息时不重复插入 CSS 或脚本', async () => {

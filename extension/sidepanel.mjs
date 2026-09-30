@@ -28,6 +28,13 @@ async function readEntryContext() {
   catch { return saved; }
   const ownExtension = chrome.runtime.getURL?.('');
   if (!Number.isInteger(tab?.id) || (ownExtension && tab.url?.startsWith(ownExtension))) return saved;
+  if (!tab.url) {
+    try {
+      const livePage = await chrome.tabs.sendMessage(tab.id, { type: 'get-page-context' });
+      const url = new URL(livePage?.url);
+      if (url.protocol === 'http:' || url.protocol === 'https:') return { tabId: tab.id, page: livePage };
+    } catch { /* 这一页还没有注入宠物，继续看工具栏留下的上下文。 */ }
+  }
   try {
     const url = new URL(tab.url);
     if (url.protocol === 'http:' || url.protocol === 'https:') {

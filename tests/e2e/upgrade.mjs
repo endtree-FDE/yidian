@@ -75,7 +75,7 @@ try {
   await launch(installed);
   assert.equal(ids()[0], originalId, 'updating the same folder changed the extension ID');
   page = await library(originalId);
-  assert.equal(await page.evaluate(() => chrome.runtime.getManifest().version), '1.3.3');
+  assert.equal(await page.evaluate(() => chrome.runtime.getManifest().version), '1.3.4');
   await page.evaluate(() => chrome.runtime.reload());
   page = await library(originalId);
   await page.waitForFunction(async () => {
@@ -118,7 +118,7 @@ try {
   assert.equal(await demo.locator('#percent').innerText(), '0/4');
   for (let step = 0; step < 4; step++) await demo.locator('#advance').click();
   assert.equal(await demo.locator('#percent').innerText(), '4/4');
-  assert.equal(await demo.locator('a[download]').getAttribute('href'), 'yidian-1.3.3.zip');
+  assert.equal(await demo.locator('a[download]').getAttribute('href'), 'yidian-1.3.4.zip');
   assert.deepEqual(pageErrors, []);
   if (process.env.YIDIAN_CAPTURE) {
     const output = fileURLToPath(new URL('../../output/', import.meta.url));
@@ -159,6 +159,8 @@ try {
   await panel.waitForFunction((title) => document.querySelector('#document-title')?.textContent === title, await webPage.title());
   await webPage.locator('#otter-yidian-card').waitFor({ state: 'visible' });
   assert.equal(await webPage.locator('#otter-yidian-root').count(), 1);
+  const liveContext = await extensionPage.evaluate((tabId) => chrome.tabs.sendMessage(tabId, { type: 'get-page-context' }), current.id);
+  assert.equal(liveContext.url, current.url);
   await webPage.locator('[data-action="mark"]').click();
   await webPage.waitForFunction(() => document.querySelector('#otter-yidian-card')?.textContent?.includes('相见 1/4'));
   assert.equal((await extensionPage.evaluate(() => chrome.storage.local.get('records'))).records.length, 1);
