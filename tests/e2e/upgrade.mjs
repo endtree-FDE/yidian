@@ -154,6 +154,9 @@ try {
   await panel.setViewportSize({ width: 410, height: 820 });
   await panel.goto(`chrome-extension://${injectionId}/sidepanel.html`);
   await panel.waitForFunction(() => document.querySelector('#progress-text')?.textContent === '0/4');
+  await webPage.bringToFront();
+  await panel.evaluate(async (windowId) => chrome.storage.session.remove(`entryContext:${windowId}`), current.windowId);
+  await panel.waitForFunction((title) => document.querySelector('#document-title')?.textContent === title, await webPage.title());
   await webPage.locator('#otter-yidian-card').waitFor({ state: 'visible' });
   assert.equal(await webPage.locator('#otter-yidian-root').count(), 1);
   await webPage.locator('[data-action="mark"]').click();
@@ -161,7 +164,7 @@ try {
   assert.equal((await extensionPage.evaluate(() => chrome.storage.local.get('records'))).records.length, 1);
   await panel.waitForFunction(() => document.querySelector('#progress-text')?.textContent === '1/4');
   assert.equal(await panel.locator('#pet').count(), 0);
-  assert.equal(await panel.locator('#document-title').innerText(), '一点官网');
+  assert.equal(await panel.locator('#document-title').innerText(), await webPage.title());
   assert.ok(await panel.locator('#next-review').innerText());
   assert.equal(await panel.evaluate(() => document.documentElement.scrollWidth), 410);
   await extensionPage.evaluate(async () => {
@@ -247,7 +250,7 @@ try {
   assert.equal(await disconnectedPanel.locator('#open-extensions').isVisible(), true);
   console.log('Browser upgrade verified: same folder keeps ID and record; second folder splits storage and shortcut.');
   console.log('Studio verified: four-step demo works and links to the current ZIP.');
-  console.log('Extension verified: the pet saves and reviews a page, the side panel tracks 0/4 to 2/4, and a disconnected library shows recovery steps.');
+  console.log('Extension verified: pet save/review, direct-open side panel context and 0/4 to 2/4 progress, plus disconnected recovery.');
 } finally {
   await context?.close();
   if (siteServer) await new Promise((resolve) => siteServer.close(resolve));
