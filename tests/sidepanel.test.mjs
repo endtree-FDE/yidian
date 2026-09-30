@@ -7,7 +7,7 @@ const ids = [
   'progress-card', 'progress-text', 'meter-fill', 'source',
   'document-title', 'status-copy', 'excerpt', 'next-review', 'primary-action',
   'retry', 'open-extensions', 'manage', 'url-input', 'save-url', 'delete-record',
-  'live-status', 'reduced-motion',
+  'live-status', 'reduced-motion', 'review-choices', 'review-later', 'review-retire',
 ];
 let importSequence = 0;
 
@@ -16,7 +16,7 @@ function harnessElement(id) {
   return {
     dataset: {},
     style: {},
-    hidden: ['progress-card', 'primary-action', 'retry', 'open-extensions', 'manage'].includes(id),
+    hidden: ['progress-card', 'primary-action', 'review-choices', 'retry', 'open-extensions', 'manage'].includes(id),
     checked: false,
     disabled: false,
     textContent: '',
@@ -28,12 +28,14 @@ function harnessElement(id) {
 
 async function loadPanel({
   context = null,
+  activeTab = null,
+  pageFromPet = null,
   records = [],
   settings = { reducedMotion: false },
   sendMessage,
 } = {}) {
   const elements = Object.fromEntries(ids.map((id) => [id, harnessElement(id)]));
-  const state = { context, records, settings, activeTabId: context?.tabId ?? null };
+  const state = { context, records, settings, activeTabId: activeTab?.id ?? context?.tabId ?? null };
   const listeners = {};
   const defaultSendMessage = async (message) => {
     if (message.type === 'get-pet-state') {
@@ -58,7 +60,8 @@ async function loadPanel({
     runtime: { sendMessage: sendMessage ?? defaultSendMessage },
     tabs: {
       create() {},
-      async query() { return [{ id: state.activeTabId }]; },
+      async query() { return [activeTab ?? { id: state.activeTabId }]; },
+      async sendMessage() { return pageFromPet; },
       onActivated: { addListener(fn) { listeners.activated = fn; } },
       onUpdated: { addListener(fn) { listeners.updated = fn; } },
     },
@@ -71,6 +74,39 @@ async function loadPanel({
 
 const page = { title: '想见的一页', url: 'https://example.com/doc' };
 const now = Date.now();
+
+test('从浏览器边栏直接打开时读取活动网页，不依赖快捷键上下文', async () => {
+  const record = createRecord({ title: page.title, url: page.url, now });
+  const { elements } = await loadPanel({
+    activeTab: { id: 41, windowId: 7, title: page.title, url: page.url }, records: [record],
+  });
+  assert.equal(elements['document-title'].textContent, page.title);
+  assert.equal(elements['progress-text'].textContent, '1/4');
+  assert.equal(elements['primary-action'].hidden, true);
+});
+
+test('活动网页暂未授权时，侧边栏说明如何连接当前页', async () => {
+  const { elements } = await loadPanel({ activeTab: { id: 41, windowId: 7 } });
+  assert.equal(elements['document-title'].textContent, '暂时读不到当前网页');
+  assert.match(elements['status-copy'].textContent, /点工具栏里的“一点”/);
+});
+
+test('活动标签网址不可见时，从已唤出的宠物取得当前网页', async () => {
+  const record = createRecord({ title: page.title, url: page.url, now });
+  const { elements } = await loadPanel({
+    activeTab: { id: 41, windowId: 7 }, pageFromPet: page, records: [record],
+  });
+  assert.equal(elements['document-title'].textContent, page.title);
+  assert.equal(elements['progress-text'].textContent, '1/4');
+});
+
+test('切换到另一标签且网址不可见时，不显示上一页的记录', async () => {
+  const { elements } = await loadPanel({
+    context: { tabId: 40, page }, activeTab: { id: 41, windowId: 7 },
+  });
+  assert.equal(elements['document-title'].textContent, '暂时读不到当前网页');
+  assert.equal(elements['progress-card'].hidden, true);
+});
 
 test('四态面板：未收下时先显示当前页动作和四步进度', async () => {
   const { elements } = await loadPanel({ context: { mode: 'current', page } });
@@ -102,11 +138,12 @@ test('四态面板：没有选段时不显示选段块', async () => {
   assert.equal(elements.excerpt.hidden, true);
 });
 
-test('四态面板：到期时给出明确的完成动作', async () => {
+test('四态面板：到期时给出三种处理结果', async () => {
   const record = { ...createRecord({ title: page.title, url: page.url, now }), nextReviewAt: now - 1000 };
   const { elements } = await loadPanel({ context: { mode: 'current', page }, records: [record] });
-  assert.equal(elements['primary-action'].textContent, '完成这次回看');
+  assert.equal(elements['primary-action'].textContent, '用上了');
   assert.equal(elements['primary-action'].hidden, false);
+  assert.equal(elements['review-choices'].hidden, false);
   assert.match(elements['status-copy'].textContent, /已到回看时间/);
 });
 
@@ -122,9 +159,9 @@ test('四态面板：完成后进度满格且不再提醒', async () => {
   assert.equal(elements['primary-action'].hidden, true);
 });
 
-test('非普通网页上下文提示去普通网页呼出', async () => {
+test('没有网页上下文时提示点击工具栏连接', async () => {
   const { elements } = await loadPanel({ context: { mode: 'current', page: null } });
-  assert.match(elements['status-copy'].textContent, /请先打开普通网页/);
+  assert.match(elements['status-copy'].textContent, /点工具栏里的“一点”/);
   assert.equal(elements['primary-action'].hidden, true);
   assert.equal(elements['progress-card'].hidden, true);
 });

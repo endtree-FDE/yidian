@@ -1,8 +1,8 @@
-const CACHE = 'yidian-site-1.3.2';
+const CACHE = 'yidian-site-1.3.4';
 const SHELL = [
   './',
   './index.html',
-  './styles.css?v=20',
+  './styles.css?v=21',
   './app.js',
   './pwa.js',
   './manifest.webmanifest',

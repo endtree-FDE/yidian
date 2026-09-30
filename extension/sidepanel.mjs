@@ -6,7 +6,7 @@ const elements = Object.fromEntries(
     'progress-card', 'progress-text', 'meter-fill', 'source',
     'document-title', 'status-copy', 'excerpt', 'next-review', 'primary-action',
     'retry', 'open-extensions', 'manage', 'url-input', 'save-url', 'delete-record',
-    'live-status', 'reduced-motion',
+    'live-status', 'reduced-motion', 'review-choices', 'review-later', 'review-retire',
   ].map((id) => [id, document.getElementById(id)]),
 );
 
@@ -22,7 +22,26 @@ const entryKey = `entryContext:${panelWindowId}`;
 
 async function readEntryContext() {
   const result = await chrome.storage.session.get(entryKey);
-  return result[entryKey] ?? null;
+  const saved = result[entryKey] ?? null;
+  let tab;
+  try { [tab] = await chrome.tabs.query({ active: true, windowId: panelWindowId }); }
+  catch { return saved; }
+  const ownExtension = chrome.runtime.getURL?.('');
+  if (!Number.isInteger(tab?.id) || (ownExtension && tab.url?.startsWith(ownExtension))) return saved;
+  if (!tab.url) {
+    try {
+      const livePage = await chrome.tabs.sendMessage(tab.id, { type: 'get-page-context' });
+      const url = new URL(livePage?.url);
+      if (url.protocol === 'http:' || url.protocol === 'https:') return { tabId: tab.id, page: livePage };
+    } catch { /* 这一页还没有注入宠物，继续看工具栏留下的上下文。 */ }
+  }
+  try {
+    const url = new URL(tab.url);
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      return { tabId: tab.id, page: { title: tab.title || url.hostname, url: tab.url } };
+    }
+  } catch { /* 当前标签可能没有网址权限，使用已记录的入口。 */ }
+  return saved?.tabId === tab.id ? saved : { tabId: tab.id, page: null };
 }
 
 function stateName(record, now = Date.now()) {
@@ -72,13 +91,14 @@ function render() {
   setVisible(elements['progress-card'], Boolean(page));
   elements.source.textContent = record?.sourceDomain ?? (page?.url ? new URL(page.url).hostname : '');
   elements['document-title'].textContent =
-    page?.title || record?.title || '请先打开一个网页';
+    page?.title || record?.title || '暂时读不到当前网页';
   elements['reduced-motion'].checked = Boolean(settings.reducedMotion);
   document.documentElement.dataset.reducedMotion = settings.reducedMotion ? 'true' : 'false';
   setVisible(elements.manage, Boolean(record));
+  setVisible(elements['review-choices'], name === 'due');
 
   if (!page && !record) {
-    elements['status-copy'].textContent = '请先打开普通网页，再用快捷键打开侧边栏。';
+    elements['status-copy'].textContent = '侧边栏暂时读不到当前网页。请在网页上点工具栏里的“一点”，这里会自动更新。';
     elements['next-review'].textContent = '';
     setVisible(elements['primary-action'], false);
     return;
@@ -100,9 +120,9 @@ function render() {
       action: '',
     },
     due: {
-      copy: '这页已到回看时间。看过后，可以完成这次回看。',
+      copy: '这页已到回看时间。看过后，选一个处理结果。',
       next: '',
-      action: '完成这次回看',
+      action: '用上了',
     },
     grown: {
       copy: '三次回看已完成，不再自动提醒。',
@@ -128,6 +148,7 @@ function showLoadError(error) {
   elements['next-review'].textContent = '';
   setVisible(elements['progress-card'], false);
   setVisible(elements['primary-action'], false);
+  setVisible(elements['review-choices'], false);
   setVisible(elements.manage, false);
   setVisible(elements.retry, true);
   setVisible(elements['open-extensions'], true);
@@ -141,6 +162,7 @@ function showStalePage(reason = 'tab-switch') {
   elements['status-copy'].textContent = '页面已切换或重新加载。再按 Alt+Shift+Y 更新这里。';
   elements['next-review'].textContent = '';
   setVisible(elements['primary-action'], false);
+  setVisible(elements['review-choices'], false);
   setVisible(elements['progress-card'], false);
   setVisible(elements.manage, false);
 }
@@ -149,7 +171,7 @@ async function currentPageIsActive() {
   if (!Number.isInteger(model?.tabId)) return true;
   try {
     const [active] = await chrome.tabs.query({ active: true, windowId: panelWindowId });
-    if (active?.id === model.tabId && !model.stale) return true;
+    if (active?.id === model.tabId && (!active.url || active.url === model.page?.url) && !model.stale) return true;
     showStalePage();
   } catch { showStalePage('navigation'); }
   return false;
@@ -158,7 +180,7 @@ async function currentPageIsActive() {
 async function mutate(message) {
   if (busy) return null;
   busy = true;
-  elements['primary-action'].disabled = true;
+  for (const button of [elements['primary-action'], elements['review-later'], elements['review-retire']]) button.disabled = true;
   elements['live-status'].textContent = '';
   try {
     const response = await send(message);
@@ -171,7 +193,7 @@ async function mutate(message) {
     return null;
   } finally {
     busy = false;
-    elements['primary-action'].disabled = false;
+    for (const button of [elements['primary-action'], elements['review-later'], elements['review-retire']]) button.disabled = false;
   }
 }
 
@@ -181,10 +203,21 @@ elements['primary-action'].addEventListener('click', async () => {
     const response = await mutate({ type: 'mark-current', tab: model.page });
     if (response?.created) elements['live-status'].textContent = '收下了。第 2 天一点会带它回来。';
   } else if (model.name === 'due') {
-    const response = await mutate({ type: 'complete-review', normalizedUrl: model.record.normalizedUrl });
-    if (response?.changed) elements['live-status'].textContent = '这次见面记下了。';
+    const response = await mutate({ type: 'decide-review', normalizedUrl: model.record.normalizedUrl, choice: 'used' });
+    if (response?.changed) elements['live-status'].textContent = `这次用上了。回看进度 ${response.record.stage}/4。`;
   }
 });
+
+for (const [id, choice, copy] of [
+  ['review-later', 'later', '已推到明天，进度不变。'],
+  ['review-retire', 'retire', '已收入归档，需要时可以找回。'],
+]) {
+  elements[id].addEventListener('click', async () => {
+    if (!await currentPageIsActive() || model.name !== 'due') return;
+    const response = await mutate({ type: 'decide-review', normalizedUrl: model.record.normalizedUrl, choice });
+    if (response?.changed) elements['live-status'].textContent = copy;
+  });
+}
 
 elements.retry.addEventListener('click', () => loadModel().catch(showLoadError));
 elements['open-extensions'].addEventListener('click', () => openExtensions().catch(showLoadError));

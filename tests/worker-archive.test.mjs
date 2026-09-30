@@ -90,6 +90,33 @@ test('归档写入失败时不先从收藏库移除记录', async () => {
   assert.equal(state.local.archivedRecords, undefined);
 });
 
+test('不再需要写入失败时仍保留正在回看的记录', async () => {
+  const state = chromeMock({ failWrites: 1 });
+  const { handleMessage } = await loadWorker('retire-atomic');
+  const record = seedRecord('仍要保留', 'https://safe.example/2', { nextReviewAt: 0 });
+  state.local.records = [record];
+  await assert.rejects(handleMessage({ type: 'decide-review', normalizedUrl: record.normalizedUrl, choice: 'retire' }), /无法保存本地记录/);
+  assert.equal(state.local.records.length, 1);
+  assert.equal(state.local.archivedRecords, undefined);
+});
+
+test('导入旧备份不会让较新的不再需要选择重新开始提醒', async () => {
+  const state = chromeMock();
+  const { handleMessage } = await loadWorker('retired-import');
+  const old = seedRecord('旧备份', 'https://safe.example/3', { nextReviewAt: 0 });
+  state.local.records = [old];
+  await handleMessage({ type: 'decide-review', normalizedUrl: old.normalizedUrl, choice: 'retire' });
+  await handleMessage({ type: 'import-records', records: [old] });
+  assert.equal(state.local.records.length, 0);
+  assert.equal(state.local.archivedRecords.length, 1);
+  await handleMessage({ type: 'import-records', records: [{ title: old.title, url: old.url, stage: 1 }] });
+  assert.equal(state.local.records.length, 0, '缺少旧时间字段的备份也不能覆盖较新的归档');
+  const newer = { ...old, updatedAt: Date.now() + 1_000 };
+  await handleMessage({ type: 'import-records', records: [newer] });
+  assert.equal(state.local.records.length, 1);
+  assert.equal(state.local.archivedRecords.length, 0);
+});
+
 test('升级时无法读取的旧归档也保留在备份中', async () => {
   const state = chromeMock();
   const { handleMessage } = await loadWorker('archive-unreadable');

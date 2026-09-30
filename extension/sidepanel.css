@@ -48,6 +48,7 @@ h1 { margin: 6px 0 10px; font-size: 22px; line-height: 1.25; overflow-wrap: anyw
 .status-copy, .next-review { color: var(--muted); line-height: 1.6; }
 .excerpt { margin:10px 0 0; padding:10px 12px; border-left:3px solid var(--mint); background:rgba(105,181,157,.12); color:#394b45; font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
 .actions, .manage-actions { display: grid; gap: 10px; margin-top: 16px; }
+.review-choices { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 button {
   border: 0;
   border-radius: 14px;
