@@ -125,6 +125,7 @@ try {
     mkdirSync(output, { recursive: true });
     await demo.locator('#features').screenshot({ path: path.join(output, 'review-site-features.png') });
     await demo.locator('#updates').screenshot({ path: path.join(output, 'review-site-updates.png') });
+    await demo.locator('#install').screenshot({ path: path.join(output, 'review-site-install.png') });
   }
 
   await context.close();

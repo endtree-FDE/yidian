@@ -1,4 +1,4 @@
-const CACHE = 'yidian-site-1.3.4';
+const CACHE = 'yidian-site-1.3.4-store-copy';
 const SHELL = [
   './',
   './index.html',
