@@ -22,7 +22,19 @@ const entryKey = `entryContext:${panelWindowId}`;
 
 async function readEntryContext() {
   const result = await chrome.storage.session.get(entryKey);
-  return result[entryKey] ?? null;
+  const saved = result[entryKey] ?? null;
+  let tab;
+  try { [tab] = await chrome.tabs.query({ active: true, windowId: panelWindowId }); }
+  catch { return saved; }
+  const ownExtension = chrome.runtime.getURL?.('');
+  if (!Number.isInteger(tab?.id) || (ownExtension && tab.url?.startsWith(ownExtension))) return saved;
+  try {
+    const url = new URL(tab.url);
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      return { tabId: tab.id, page: { title: tab.title || url.hostname, url: tab.url } };
+    }
+  } catch { /* 当前标签可能没有网址权限，使用已记录的入口。 */ }
+  return saved?.tabId === tab.id ? saved : { tabId: tab.id, page: null };
 }
 
 function stateName(record, now = Date.now()) {
@@ -72,14 +84,14 @@ function render() {
   setVisible(elements['progress-card'], Boolean(page));
   elements.source.textContent = record?.sourceDomain ?? (page?.url ? new URL(page.url).hostname : '');
   elements['document-title'].textContent =
-    page?.title || record?.title || '请先打开一个网页';
+    page?.title || record?.title || '暂时读不到当前网页';
   elements['reduced-motion'].checked = Boolean(settings.reducedMotion);
   document.documentElement.dataset.reducedMotion = settings.reducedMotion ? 'true' : 'false';
   setVisible(elements.manage, Boolean(record));
   setVisible(elements['review-choices'], name === 'due');
 
   if (!page && !record) {
-    elements['status-copy'].textContent = '请先打开普通网页，再用快捷键打开侧边栏。';
+    elements['status-copy'].textContent = '侧边栏暂时读不到当前网页。请在网页上点工具栏里的“一点”，这里会自动更新。';
     elements['next-review'].textContent = '';
     setVisible(elements['primary-action'], false);
     return;
@@ -152,7 +164,7 @@ async function currentPageIsActive() {
   if (!Number.isInteger(model?.tabId)) return true;
   try {
     const [active] = await chrome.tabs.query({ active: true, windowId: panelWindowId });
-    if (active?.id === model.tabId && !model.stale) return true;
+    if (active?.id === model.tabId && (!active.url || active.url === model.page?.url) && !model.stale) return true;
     showStalePage();
   } catch { showStalePage('navigation'); }
   return false;

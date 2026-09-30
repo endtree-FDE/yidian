@@ -514,23 +514,29 @@ export async function handleMessage(message) {
 }
 
 async function handleToolbarClick(tab) {
+  await rememberPanelContext(tab).catch(() => undefined);
   const records = await getRecords();
   await showPetOnTab(tab, selectNextDue(records) ? 'review' : 'current');
 }
 
-// 侧边栏入口：快捷键 open-side-panel。把当前页上下文写进 session 存储，
-// 让侧边栏知道该看哪一页；sidePanel.open 必须留在用户手势调用栈里。
-async function openSidePanel(tab) {
+async function rememberPanelContext(tab) {
   if (!Number.isInteger(tab?.windowId)) return;
   const page = tab.url && isWebUrl(tab.url) ? { title: tab.title ?? '', url: tab.url } : null;
-  await chrome.storage.session.set({
+  await chrome.storage.session?.set({
     [`entryContext:${tab.windowId}`]: { mode: 'current', page, tabId: tab.id, openedAt: Date.now() },
   });
+}
+
+// sidePanel.open 必须留在用户手势调用栈里。
+async function openSidePanel(tab) {
+  if (!Number.isInteger(tab?.windowId)) return;
+  await rememberPanelContext(tab);
   await chrome.sidePanel.open({ windowId: tab.windowId });
 }
 
 export async function handleCommand(command, tab) {
   if (command === 'open-current-document') {
+    await rememberPanelContext(tab).catch(() => undefined);
     await showPetOnTab(tab, 'current');
     return;
   }

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 function chromeMock({ failWrites = 0, missingReceiverOnce = false, injectionError = null } = {}) {
   const local = {};
+  const session = {};
   const calls = { alarmCreates: [], alarmClears: [], badges: [], insertedCss: [], scripts: [], messages: [], opened: [] };
   const listeners = {};
   let writeFailures = failWrites;
@@ -19,6 +20,10 @@ function chromeMock({ failWrites = 0, missingReceiverOnce = false, injectionErro
           if (writeFailures > 0) { writeFailures -= 1; throw new Error('storage unavailable'); }
           Object.assign(local, structuredClone(values));
         },
+      },
+      session: {
+        async get(key) { return { [key]: structuredClone(session[key]) }; },
+        async set(values) { Object.assign(session, structuredClone(values)); },
       },
       onChanged: { addListener(fn) { listeners.storage = fn; } },
     },
@@ -63,7 +68,7 @@ function chromeMock({ failWrites = 0, missingReceiverOnce = false, injectionErro
       },
     },
   };
-  return { local, calls, listeners };
+  return { local, session, calls, listeners };
 }
 
 async function loadWorker(tag) {
@@ -308,10 +313,12 @@ test('工具栏有到期记录时显示回访，快捷键始终显示当前页�
   state.listeners.action(tabA);
   await new Promise((resolve) => setTimeout(resolve, 15));
   assert.equal(state.calls.messages.at(-1).message.mode, 'review');
+  assert.equal(state.session['entryContext:1'].page.url, tabA.url);
   state.listeners.command('open-current-document', tabB);
   await new Promise((resolve) => setTimeout(resolve, 15));
   assert.equal(state.calls.messages.at(-1).message.mode, 'current');
   assert.equal(state.calls.messages.at(-1).tabId, tabB.id);
+  assert.equal(state.session['entryContext:2'].page.url, tabB.url);
 });
 
 test('活跃宠物响应消息时不重复插入 CSS 或脚本', async () => {

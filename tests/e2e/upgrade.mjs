@@ -146,19 +146,14 @@ try {
   const tabs = await extensionPage.evaluate(() => chrome.tabs.query({}));
   const current = tabs.find((tab) => tab.url?.startsWith(`http://127.0.0.1:${siteServer.address().port}/`));
   assert.ok(current, 'test page was not visible to the extension');
-  await extensionPage.evaluate(async ({ windowId, url }) => {
-    await chrome.storage.session.set({
-      [`entryContext:${windowId}`]: { mode: 'current', page: { title: '一点官网', url }, openedAt: Date.now() },
-    });
-  }, { windowId: current.windowId, url: current.url });
+  await extensionPage.evaluate(async ({ id, windowId, url }) => {
+    const workerModule = await import(chrome.runtime.getURL('service-worker.mjs'));
+    await workerModule.handleCommand('open-current-document', { id, windowId, url, title: '一点官网' });
+  }, { id: current.id, windowId: current.windowId, url: current.url });
   const panel = await context.newPage();
   await panel.setViewportSize({ width: 410, height: 820 });
   await panel.goto(`chrome-extension://${injectionId}/sidepanel.html`);
   await panel.waitForFunction(() => document.querySelector('#progress-text')?.textContent === '0/4');
-  await extensionPage.evaluate(async ({ id, url }) => {
-    const workerModule = await import(chrome.runtime.getURL('service-worker.mjs'));
-    await workerModule.handleCommand('open-current-document', { id, url });
-  }, { id: current.id, url: current.url });
   await webPage.locator('#otter-yidian-card').waitFor({ state: 'visible' });
   assert.equal(await webPage.locator('#otter-yidian-root').count(), 1);
   await webPage.locator('[data-action="mark"]').click();
