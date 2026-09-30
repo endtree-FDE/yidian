@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "exportedAt": "2026-09-30T00:00:00.000Z",
+  "records": [
+    {
+      "title": "一点审核示例：到期回看",
+      "excerpt": "这条公开示例只用于验证到期回看，不包含个人数据。",
+      "url": "https://example.com/",
+      "canonicalUrl": "",
+      "normalizedUrl": "https://example.com/",
+      "sourceDomain": "example.com",
+      "stage": 1,
+      "completedAt": 1577836800000,
+      "nextReviewAt": 1577923200000,
+      "createdAt": 1577836800000,
+      "updatedAt": 1577836800000,
+      "skinId": "fluid-01",
+      "encounters": [
+        {
+          "type": "saved",
+          "at": 1577836800000,
+          "stage": 1,
+          "excerpt": "这条公开示例只用于验证到期回看，不包含个人数据。"
+        }
+      ]
+    }
+  ],
+  "archived": []
+}
