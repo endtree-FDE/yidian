@@ -14,7 +14,11 @@ const duplicate = path.join(root, 'second-extension');
 const injectionCopy = path.join(root, 'injection-test-extension');
 const source = fileURLToPath(new URL('../../extension/', import.meta.url));
 const site = fileURLToPath(new URL('../../studio/', import.meta.url));
-const oldZip = fileURLToPath(new URL('../../studio/yidian-1.3.1.zip', import.meta.url));
+const oldVersion = process.env.YIDIAN_UPGRADE_FROM || '1.3.1';
+assert.ok(['1.0.1', '1.3.1'].includes(oldVersion), 'Unsupported upgrade baseline');
+const oldZip = process.env.YIDIAN_OLD_ZIP
+  ? path.resolve(process.env.YIDIAN_OLD_ZIP)
+  : fileURLToPath(new URL(`../../studio/yidian-${oldVersion}.zip`, import.meta.url));
 let context;
 let siteServer;
 
@@ -44,6 +48,7 @@ function ids() {
 }
 
 try {
+  assert.ok(existsSync(oldZip), `Upgrade archive is missing: ${oldZip}; pass YIDIAN_OLD_ZIP for an external baseline`);
   const quote = (value) => `'${value.replaceAll("'", "''")}'`;
   execFileSync('powershell', [
     '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
@@ -52,9 +57,9 @@ try {
 
   await launch(installed);
   const originalId = ids()[0];
-  assert.ok(originalId, '1.3.1 extension did not start');
+  assert.ok(originalId, `${oldVersion} extension did not start`);
   let page = await library(originalId);
-  assert.equal(await page.evaluate(() => chrome.runtime.getManifest().version), '1.3.1');
+  assert.equal(await page.evaluate(() => chrome.runtime.getManifest().version), oldVersion);
   const marked = await page.evaluate(() => chrome.runtime.sendMessage({
     type: 'mark-current', tab: { title: '升级测试', url: 'https://example.com/upgrade' },
   }));
@@ -251,7 +256,7 @@ try {
   assert.match(await disconnectedPanel.locator('#status-copy').innerText(), /刷新“一点”后重试/);
   assert.equal(await disconnectedPanel.locator('#progress-card').isVisible(), false);
   assert.equal(await disconnectedPanel.locator('#open-extensions').isVisible(), true);
-  console.log('Browser upgrade verified: same folder keeps ID and record; second folder splits storage and shortcut.');
+  console.log(`Browser upgrade verified: ${oldVersion} to 1.3.4 keeps ID and record; second folder splits storage and shortcut.`);
   console.log('Studio verified: four-step demo works and links to the current ZIP.');
   console.log('Extension verified: pet save/review, direct-open side panel context and 0/4 to 2/4 progress, plus disconnected recovery.');
 } finally {
