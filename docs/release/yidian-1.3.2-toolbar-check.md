@@ -5,7 +5,7 @@
 ## 准备
 
 1. 在 Edge 新建一个**不登录的本地测试配置**。不要把测试版加载到已有收藏的浏览器配置，也不要卸载旧版“一点”。
-2. 把 `studio/yidian-1.3.2.zip` **先解压**到新文件夹。确认文件夹根目录直接有 `manifest.json`，其中版本为 `1.3.2`。
+2. 用 `scripts/release.ps1` 在本地生成安装包后**先解压**到新文件夹。脚本写入已被忽略的 `studio/yidian-<版本>.zip`，仓库里没有这份 ZIP。确认文件夹根目录直接有 `manifest.json`，其中版本为 `1.3.2`。已发布的安装包在 [GitHub Releases](https://github.com/endtree-FDE/yidian/releases)；撰写本文时 1.3.2 没有单独的 Release 附件。
 3. 在测试配置中打开 `edge://extensions`，开启开发者模式，选择“加载解压缩的扩展”。弹出的窗口只显示文件夹，ZIP 文件不会出现；选择上一步内含 `manifest.json` 的文件夹。确认扩展卡片显示“一点”与版本 `1.3.2`。
 
 待测 ZIP 的 SHA256：`5062d826d139f0c7d56ea97a9d0d2267a3eded90f9fd5cf8ba0ccbecceb71f20`。

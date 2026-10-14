@@ -35,6 +35,6 @@
 
 ## 发布动作
 1. `package.json` / `extension/manifest.json` 版本 → 1.3.0，两处测试断言同步。
-2. `scripts/release.ps1` 出包 `C:\12730\packages\yidian-1.3.0.zip`。
+2. `scripts/release.ps1` 当时出包到本地 `C:\12730\packages\yidian-1.3.0.zip`。公开附件：<https://github.com/endtree-FDE/yidian/releases/download/v1.3.0/yidian-1.3.0.zip>。
 3. tag `v1.3.0`。
 4. gh-pages：更新 zip、changelog 1.3.0 段落、下载卡与首页文案。

@@ -15,6 +15,12 @@ test('恢复入口打开当前浏览器的扩展管理页', async () => {
   const opened = [];
   globalThis.chrome = { tabs: { async create(options) { opened.push(options); } } };
   await openExtensions();
-  assert.equal(opened.length, 1);
+  await openExtensions('Mozilla/5.0 Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0');
+  await openExtensions('Mozilla/5.0 Chrome/120.0.0.0 Safari/537.36');
+  await openExtensions('');
+  assert.equal(opened.length, 4);
   assert.ok(['chrome://extensions/', 'edge://extensions/'].includes(opened[0].url));
+  assert.equal(opened[1].url, 'edge://extensions/');
+  assert.equal(opened[2].url, 'chrome://extensions/');
+  assert.equal(opened[3].url, 'chrome://extensions/');
 });

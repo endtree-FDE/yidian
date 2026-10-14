@@ -1,4 +1,6 @@
 ﻿# Build the public ZIP from the exact extension source after all checks pass.
+# Output is studio/yidian-<version>.zip, a gitignored build artifact.
+# Upload it to GitHub Releases; do not commit it.
 # Run: powershell -ExecutionPolicy Bypass -File scripts/release.ps1
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot

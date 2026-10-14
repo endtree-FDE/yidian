@@ -12,16 +12,16 @@
 
 - `npm run check`：117 项通过，包含侧栏切换网页时对迟到的读取结果、错误和设置变更的保护。
 - `npm run test:e2e`：真实 Edge 中，向线上 1.3.1 包写入正常与异常旧记录，在原目录替换 1.3.2 并刷新扩展后台后，确认扩展 ID 与正常收藏保留、异常原件进入备份；网页宠物完成收下及到期回看，侧边栏随本地变化从 0/4 更新到 2/4；第二目录产生独立 ID、独立存储及快捷键冲突；官网演示、断连恢复和无需后台的原始备份导出通过。临时测试权限不进入发布包。
-- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1`：以上检查通过并生成 `studio/yidian-1.3.2.zip`。
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1`：以上检查通过并在本地生成 `studio/yidian-1.3.2.zip`。安装包不纳入仓库；对外发布挂到 [GitHub Releases](https://github.com/endtree-FDE/yidian/releases)。
 - 独立读取 ZIP：23 个条目，均为便携的 `/` 目录路径，内容 SHA256 与 `extension/` 逐文件一致，根目录 `manifest.json` 为 1.3.2。同一源码连续打包两次，ZIP SHA256 相同。
 
 待发布 ZIP 的 SHA256 为 `5062d826d139f0c7d56ea97a9d0d2267a3eded90f9fd5cf8ba0ccbecceb71f20`；部署后应重新下载并核对。
 
 ## 发布顺序
 
-1. 审查并合并 GitHub 源码变更，确认主分支包含 1.3.2 的扩展、官网源码及 ZIP。
+1. 审查并合并 GitHub 源码变更，确认主分支包含 1.3.2 的扩展与官网源码。安装包由 `scripts/release.ps1` 本地生成，不提交进仓库。
 2. 从同一次提交的 `studio/` 同步到 ModelScope 创空间的 `master`，保留其 Git 历史，采用正常快进提交，不强推。
-3. 打开公开页面核对版本与安装链接；下载 ZIP 回读清单版本及文件哈希；在 Edge 的固定安装目录完成一次真实升级、唤出宠物、收藏、回看和备份导入。
+3. 打开公开页面核对版本与安装链接；从 GitHub Releases 下载 ZIP 回读清单版本及文件哈希；在 Edge 的固定安装目录完成一次真实升级、唤出宠物、收藏、回看和备份导入。
 4. 仅在这些检查通过后对外宣布 1.3.2。已有多个解压版的用户应先逐份导出备份、再合入保留的版本，核对完成前不要卸载旧版。
 
 网页中的互动演示不能替代扩展验收；自动化使用临时站点权限，仍需按 [工具栏验收清单](yidian-1.3.2-toolbar-check.md) 在正式最小权限安装包上手点一次图标。

@@ -46,7 +46,7 @@
 
 ## 产物与发布动作
 
-- `packages/yidian-1.2.0.zip`（扁平目录结构，符合 Edge Add-ons 要求）与同名 unpacked 目录。
+- 本地构建产物 `packages/yidian-1.2.0.zip`（扁平目录结构，符合 Edge Add-ons 要求）与同名 unpacked 目录。该路径不在仓库中；后续公开安装包放在 [GitHub Releases](https://github.com/endtree-FDE/yidian/releases)。
 - 官网 changelog（studio/changelog.html）新增 1.2.0 段落；gh-pages 站点同步 changelog 与下载链接。
 - 打 tag `v1.2.0`。
 - Edge 商店提交使用新 zip（审核周期长，作为最后一批动作，状态变化记录在官网更新页）。

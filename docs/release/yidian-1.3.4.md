@@ -13,7 +13,7 @@
 
 - `npm run check`：127 项通过（含审核示例备份）。
 - `npm run test:e2e`：真实 Edge 中验证 1.3.1 原目录升级、收藏和异常数据保留；“今天看一条”推迟、再次到期、用上、归档；从浏览器边栏直接打开时读取活动网页，网页宠物和侧边栏进度同步；断连时的恢复入口。
-- `scripts/release.ps1`：重新运行以上检查，逐文件生成并校验 `studio/yidian-1.3.4.zip`。ZIP 根目录直接含 `manifest.json`，共 23 个文件，无 Windows 反斜杠路径。
+- `scripts/release.ps1`：重新运行以上检查，在本地生成并校验 `studio/yidian-1.3.4.zip`。该 ZIP 是构建产物，不纳入仓库；对外发布请挂到 [GitHub Releases](https://github.com/endtree-FDE/yidian/releases)。当时 ZIP 根目录直接含 `manifest.json`，共 23 个文件，无 Windows 反斜杠路径。
 - 连续两次构建得到相同 ZIP SHA256：`784624f6498dfb2e0042dc893f63febef80ba373ed8e664b3fca5f2751786219`。
 - 已在真实 Edge 截图检查收藏库焦点卡片、侧边栏、网页宠物及官网主要区块。
 
