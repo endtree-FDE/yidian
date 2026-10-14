@@ -4,7 +4,7 @@
 
 ## 提交包
 
-- 上传 `studio/yidian-1.3.4.zip`。SHA256：`784624f6498dfb2e0042dc893f63febef80ba373ed8e664b3fca5f2751786219`。
+- 上传由 `scripts/release.ps1` 生成的 `yidian-1.3.4.zip`（本地构建产物，曾放在 `studio/`，现不纳入仓库）。SHA256：`784624f6498dfb2e0042dc893f63febef80ba373ed8e664b3fca5f2751786219`。
 - ZIP 根目录直接包含 `manifest.json`；版本 1.3.4；23 个文件；没有 `host_permissions` 或常驻内容脚本。
 - 127 项检查和真实 Edge 升级、收藏、回看、侧边栏、导入导出流程已通过。安装包与官网公开下载包字节一致。上线后公开商店 CRX 的 22 个代码与资源文件也与该 ZIP 一致。
 - 保留现有商店条目及自动更新关系；不要创建新商品或重设扩展 ID。

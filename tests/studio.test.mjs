@@ -15,7 +15,8 @@ test('官网、扩展和离线缓存使用同一发布版本', async () => {
   ]);
   const version = JSON.parse(packageFile).version;
   assert.equal(JSON.parse(manifestFile).version, version);
-  assert.ok(html.includes(`href="yidian-${version}.zip"`));
+  assert.ok(html.includes('href="https://github.com/endtree-FDE/yidian/releases"'));
+  assert.equal(html.includes(`href="yidian-${version}.zip"`), false);
   assert.ok(html.includes(`官网与 Edge 商店均已更新到 ${version}`));
   assert.ok(readme.includes(`\`${version}\``));
   assert.ok(worker.includes(`yidian-site-${version}`));
@@ -44,7 +45,7 @@ test('ModelScope Static 创空间入口与卡片配置完整', async () => {
   assert.match(html, /重要的，<br><em>不只见一次。<\/em>/);
   assert.match(html, /<a class="primary" href="#demo">看看怎么用<\/a>/);
   assert.doesNotMatch(html, /<a[^>]+href="#demo"[^>]*>收下一条<\/a>/);
-  assert.match(html, /yidian-1\.3\.4\.zip/);
+  assert.doesNotMatch(html, /href="yidian-1\.3\.4\.zip"/);
   assert.match(html, /不读取未选择的正文，不上传记录，不要求登录/);
   assert.match(html, /id="features"/);
   assert.match(html, /我的收藏/);
@@ -62,7 +63,7 @@ test('ModelScope Static 创空间入口与卡片配置完整', async () => {
   assert.match(html, /href="changelog\.html">查看完整更新记录 →<\/a>/);
   assert.match(html, /先选版本，<br>再照着装。/);
   assert.match(html, /microsoftedge\.microsoft\.com\/addons\/detail\/mdpemepjnajchhlagfkpggenllebeacd/);
-  assert.match(html, /下载官网 1\.3\.4/);
+  assert.match(html, /到 GitHub Releases 下载/);
   assert.match(html, /途中偶遇 2 次/);
   assert.match(html, /相见足迹示意/);
   assert.match(html, /让一点留在浏览器右上角/);

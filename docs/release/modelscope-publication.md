@@ -21,7 +21,7 @@ GitHub 发布分支：`codex/12730-next-gen`
 - `README.md`：ModelScope Studio Card，声明 `sdk: static` 与 `entry_file: index.html`
 - `index.html`、`styles.css`、`app.js`：无外部依赖的互动演示
 - `icon.png`
-- `yidian-1.0.3.zip`：Chrome / Edge 浏览器扩展下载包，ZIP 根目录直接包含 `manifest.json`
+- `yidian-1.0.3.zip`：当时随发布分支提供的 Chrome / Edge 安装包，ZIP 根目录直接包含 `manifest.json`。当前仓库不再提交安装包；已发布的 ZIP 见 <https://github.com/endtree-FDE/yidian/releases>。下面这份清单记录的是当时发布分支的内容。
 
 ## 发布方式
 
@@ -37,7 +37,7 @@ ModelScope 官方说明：<https://www.modelscope.cn/docs/studios/create>
 2. 宠物可以真实拖动，松手后停在落点。
 3. 连续点击体验按钮，进度为 0%、25%、50%、75%、100%。
 4. 390px 手机宽度无横向滚动。
-5. 下载链接返回 ZIP；解压后根目录存在 `manifest.json`，版本为 1.0.3。
+5. 当时的下载链接返回 ZIP；解压后根目录存在 `manifest.json`，版本为 1.0.3。当前首页改为指向 GitHub Releases，不再附带同目录 ZIP。
 6. 对同一网页再次点击“收下”时，展示“途中偶遇”，原回看进度不重置。
 7. README 能被平台正确解析，页面没有构建错误。
 8. 公开网址在未登录状态下可访问。

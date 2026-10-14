@@ -48,7 +48,7 @@ function ids() {
 }
 
 try {
-  assert.ok(existsSync(oldZip), `Upgrade archive is missing: ${oldZip}; pass YIDIAN_OLD_ZIP for an external baseline`);
+  assert.ok(existsSync(oldZip), `Upgrade archive is missing: ${oldZip}. Release zips are gitignored; pass YIDIAN_OLD_ZIP or build one with scripts/release.ps1`);
   const quote = (value) => `'${value.replaceAll("'", "''")}'`;
   execFileSync('powershell', [
     '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
@@ -123,7 +123,7 @@ try {
   assert.equal(await demo.locator('#percent').innerText(), '0/4');
   for (let step = 0; step < 4; step++) await demo.locator('#advance').click();
   assert.equal(await demo.locator('#percent').innerText(), '4/4');
-  assert.equal(await demo.locator('a[download]').getAttribute('href'), 'yidian-1.3.4.zip');
+  assert.equal(await demo.locator('#install a.secondary').getAttribute('href'), 'https://github.com/endtree-FDE/yidian/releases');
   assert.deepEqual(pageErrors, []);
   if (process.env.YIDIAN_CAPTURE) {
     const output = fileURLToPath(new URL('../../output/', import.meta.url));

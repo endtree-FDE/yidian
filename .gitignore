@@ -1,6 +1,6 @@
 output/
 node_modules/
+# scripts/release.ps1 writes studio/yidian-*.zip. Publish those on GitHub Releases.
 *.zip
-!studio/yidian-*.zip
 *.bundle
 .playwright-cli/

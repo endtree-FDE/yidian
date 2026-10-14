@@ -4,7 +4,7 @@
 
 ## 包与身份
 
-- [ ] 解压 studio/yidian-1.0.0.zip，确认 manifest.json 位于 ZIP 根目录。
+- [ ] 从 [GitHub Release v1.0.0](https://github.com/endtree-FDE/yidian/releases/download/v1.0.0/yidian-1.0.0.zip) 下载并解压安装包（仓库不再提交 `studio/*.zip`），确认 manifest.json 位于 ZIP 根目录。
 - [ ] 在 edge://extensions 加载解压后的文件夹。
 - [ ] 名称为“一点｜收藏回看工具”，版本为 1.0.0，没有红色错误。
 - [ ] 工具栏图标与官网图标一致，右上红点属于品牌图形；到期数字另显示为绿色 badge。
