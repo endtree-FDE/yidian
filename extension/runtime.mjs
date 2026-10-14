@@ -19,7 +19,7 @@ export async function send(message) {
   }
 }
 
-export function openExtensions() {
-  const url = navigator.userAgent.includes('Edg/') ? 'edge://extensions/' : 'chrome://extensions/';
+export function openExtensions(userAgent = globalThis.navigator?.userAgent || '') {
+  const url = String(userAgent).includes('Edg/') ? 'edge://extensions/' : 'chrome://extensions/';
   return chrome.tabs.create({ url });
 }
