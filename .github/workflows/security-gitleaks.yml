@@ -1,0 +1,26 @@
+name: security
+
+# 密钥闸门：PR 与 push 扫描增量，每周一全历史复查（北京时间凌晨）。
+# 红了 = 有疑似密钥，先看 findings 再谈合并；自动化只开 PR，不直推。
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 21 * * 0"
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks 扫描（工作树 + 全历史）
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 私有仓无 GHAS：SARIF 上传会被 403（Resource not accessible by integration）。
+          # 扫描本身是本地行为，关掉上传不影响检出能力。
+          GITLEAKS_ENABLE_UPLOAD: false
