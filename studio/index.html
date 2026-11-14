@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="一点把你在工作和学习中收藏的重要内容，按节奏重新带到面前。">
+  <meta name="theme-color" content="#f7f3e8">
+  <meta name="application-name" content="一点">
+  <title>一点｜工作与学习的收藏回看工具</title>
+  <link rel="icon" href="icon.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css?v=21">
+</head>
+<body>
+  <div class="reading-journey" aria-hidden="true">
+    <span class="reading-journey__hint">跟着一点，慢慢往下看</span>
+    <div class="reading-journey__rail"><i></i></div>
+    <img src="icon.png" alt="">
+    <ol><li>1</li><li>2</li><li>7</li><li>30</li></ol>
+  </div>
+  <nav class="nav" aria-label="主导航">
+    <a class="brand" href="#top" aria-label="一点首页"><img class="brand-icon" src="icon.png" alt="">一点</a>
+    <div class="nav-links">
+      <a href="#features">功能</a><a href="#updates">更新记录</a><a href="#privacy">隐私</a><a href="#install">安装</a><a class="nav-feedback" href="contact.html#feedback">反馈</a>
+      <a class="nav-download" href="#install">安装一点</a>
+    </div>
+  </nav>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="kicker">工作与学习的收藏回看工具</p>
+        <h1>重要的，<br><em>不只见一次。</em></h1>
+        <p class="hero-lead">在工作或学习中看到值得再看的网页或文字，点一下先收下。第 2、7、30 天，浏览器右上角的一点图标会出现数字；你点开时，它一次带回一条。收下的东西不会堆成愧疚——忘了也没关系，一点只负责在合适的时间，带你再见它一面。</p>
+        <div class="hero-actions">
+          <a class="primary" href="#demo">看看怎么用</a>
+          <a class="secondary" href="#install">选择安装方式</a>
+        </div>
+        <p class="microcopy">免费 · 无需登录 · 收藏只在这台电脑里</p>
+        <a class="visit-proof" href="https://www.modelscope.cn/studios/endTree26/yidian" target="_blank" rel="noopener noreferrer" aria-label="查看一点的 ModelScope 创空间">
+          <strong>30,000+</strong><span>次创空间访问 · 谢谢每一次见面</span><i aria-hidden="true">↗</i>
+        </a>
+      </div>
+
+      <div id="demo" class="demo" aria-label="一点互动演示">
+        <div class="demo-topline"><span>收下和回看时，进度会一步步增长</span><button id="reset" type="button">重新体验</button></div>
+        <div class="pet-stage" id="pet-stage">
+          <div class="demo-pet" id="demo-pet" role="img" aria-label="可拖动的一点宠物，宠物成长 0%" tabindex="0">
+            <div class="pet-body"><div class="liquid" id="liquid"></div><div class="eyes"></div><div class="mouth"></div></div>
+            <div class="feet"><i></i><i></i></div>
+          </div>
+        </div>
+        <article class="demo-card" aria-live="polite">
+          <p id="demo-eyebrow">今天先收下一条</p>
+          <h2 id="demo-title">现代艺术史 · 第三讲</h2>
+          <p id="demo-meta">选中的段落 · 共 4 步</p>
+          <div class="demo-progress"><strong id="percent">0/4</strong><span id="progress-copy">收下 1 次，再回看 3 次</span></div>
+          <button id="advance" class="demo-primary" type="button">收下这条</button>
+        </article>
+        <ol class="rhythm" aria-label="再次查看节奏">
+          <li data-step="1"><b>第 1 天</b><span>收下</span></li>
+          <li data-step="2"><b>第 2 天</b><span>第 1 次回看</span></li>
+          <li data-step="3"><b>第 7 天</b><span>第 2 次回看</span></li>
+          <li data-step="4"><b>第 30 天</b><span>第 3 次回看</span></li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="why" class="problem">
+      <div>
+        <p class="section-tag">收藏之后，还应该有下文</p>
+        <h2>让重要内容重新回到眼前，<br>也回到判断和行动中。</h2>
+      </div>
+      <div class="problem-grid">
+        <article><span>01</span><h3>点图标，收下一条</h3><p>在普通网页点开“一点”，再点“收下这条”。整页或选段都会保存在本地。</p></article>
+        <article><span>02</span><h3>出现数字，完成回看</h3><p>第 2、7、30 天，到期数量会显示在图标旁。点开查看带回的内容，再确认完成这次回看。</p></article>
+        <article><span>03</span><h3>收下 1 次，再回看 3 次</h3><p>每条内容共 4 步。每完成一步，宠物也会跟着长一点。</p></article>
+      </div>
+      <aside class="quiet-reminder" aria-label="一点到期提醒示意">
+        <div class="toolbar-sample" aria-hidden="true"><span>浏览器工具栏</span><b><img src="icon.png" alt=""><i>1</i></b></div>
+        <div><p class="section-tag">安静提醒</p><h3>到期时，图标旁出现数字。</h3><p>数字表示待回看的收藏数量。不弹窗，不催促；你点开时，一次带回一条。</p></div>
+      </aside>
+    </section>
+
+    <section class="use-cases">
+      <p class="section-tag">工作和学习，都可以先收下</p>
+      <h2>区别发生在内容回来以后。</h2>
+      <div class="case-row">
+        <article><b>工作继续</b><p>资料、决定和项目上下文回来后，继续、完成或重新判断。</p></article>
+        <article><b>学习再懂</b><p>文章、笔记和知识点回来后，回忆、核对或再理解。</p></article>
+        <article><b>由你决定</b><p>内容回来后，继续使用、暂时放下或删除记录，选择始终留在你手里。</p></article>
+      </div>
+    </section>
+
+    <section id="features" class="features">
+      <div class="features-heading">
+        <div><p class="section-tag">1.3.4 已经能做什么</p><h2>今天先看一条，<br>看完自己决定。</h2></div>
+        <p><strong>官网与 Edge 商店均已更新到 1.3.4。</strong>Edge 用户可以选择商店安装和自动更新；Chrome 用户或需要手动安装时，可下载官网同版本。</p>
+      </div>
+      <div class="features-layout">
+        <div class="library-preview" aria-label="我的收藏页面示意">
+          <div class="library-title"><span>我的收藏</span><small>本地记录</small></div>
+          <div class="library-summary"><div><b>12</b><span>条收藏</span></div><div><b>2</b><span>今天待回看</span></div><div><b>4</b><span>已完成回看计划</span></div></div>
+          <div class="library-today"><small>今天看一条 · 还有 1 条</small><strong>项目复盘里的关键决定</strong><p>打开原网页后，选“用上了”“稍后再看”或“不再需要”。</p><span>打开原网页　·　用上了　·　稍后再看</span></div>
+          <article class="library-record due">
+            <div><small>途中偶遇 2 次 · 进度仍是 2/4</small><strong>项目复盘里的关键决定</strong><p>你又遇见了它；原来的回看计划一直在继续。</p></div>
+            <span class="record-progress"><i class="half"></i></span>
+          </article>
+          <div class="encounter-note" aria-label="相见足迹示意"><span>7 月 28 日收下</span><i></i><span>7 月 31 日偶遇</span><i></i><span>8 月 2 日偶遇</span></div>
+          <article class="library-record">
+            <div><small>下次回看：7 月 30 日 · 进度 3/4</small><strong>现代艺术史 · 第三讲</strong><p>选中的段落会和来源一起保留。</p></div>
+            <span class="record-progress"><i class="three-quarters"></i></span>
+          </article>
+          <p class="library-tools">搜索与归档 · 回看统计 · JSON / Markdown 导出</p>
+        </div>
+        <div class="feature-list">
+          <article><span>01</span><div><b>收下整页或选段</b><p>保存来源和你主动选中的文字；侧边栏也会先把当初的选段带回来。</p></div></article>
+          <article><span>02</span><div><b>第 2、7、30 天再见</b><p>到期数量显示在图标旁；一次只带回一条，不把收藏变成新的积压。</p></div></article>
+          <article><span>03</span><div><b>看完自己决定</b><p>“用上了”推进一次回看；“稍后再看”推到明天；“不再需要”收入可恢复的归档。</p></div></article>
+          <article><span>04</span><div><b>免打扰与每日摘要</b><p>默认 22:00–08:00 保持安静；多条到期时每天最多发一条摘要通知。</p></div></article>
+          <article><span>05</span><div><b>导出 JSON 或 Markdown</b><p>备份可以再导回来；Markdown 带来源、选段与足迹，可直接放进 Obsidian。</p></div></article>
+          <article><span>06</span><div><b>无需登录</b><p>不读取未选择的正文，不把收藏记录上传到网络。</p></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="updates" class="updates" aria-labelledby="updates-title">
+      <div class="updates-heading">
+        <div>
+          <p class="section-tag">1.3.4 更新速览 · 2026-09-30</p>
+          <h2 id="updates-title">今天先见一条，<br>看完再做选择。</h2>
+        </div>
+        <div class="updates-intro">
+          <p>收藏库先带回一条到期内容。看过后，你可以用上、推迟或归档，原来的收藏和回看进度会保留。</p>
+          <a href="changelog.html">查看完整更新记录 →</a>
+        </div>
+      </div>
+      <div class="update-grid">
+        <article><span>今天一条</span><h3>打开收藏库就知道先看什么</h3><p>最早到期的一条先出现，附上原网页和当时选中的文字；其他收藏仍在下面。</p></article>
+        <article><span>用上了</span><h3>这次回看记进原来的四步计划</h3><p>进度只前进一步，下次仍按原来的回看节奏安排。</p></article>
+        <article><span>稍后再看</span><h3>推到明天，不补进度</h3><p>今天先放下，记录和选段留在原处，也不会继续算作今天到期。</p></article>
+        <article><span>不再需要</span><h3>收进归档，随时可找回</h3><p>这条不再提醒；历史记录留在本地备份里，需要时可以恢复。</p></article>
+      </div>
+      <div class="updates-foot">
+        <p><strong>更新记录一直都在。</strong>从 1.0.0 到 1.3.4，每一版做了什么、修了什么，都按日期留下来了。</p>
+        <a href="https://github.com/endtree-FDE/yidian" target="_blank" rel="noopener noreferrer">在 GitHub 看项目 ↗</a>
+      </div>
+    </section>
+
+    <section id="privacy" class="privacy">
+      <div class="privacy-seal"><strong>LOCAL</strong><span>本地优先</span></div>
+      <div>
+        <p class="section-tag">隐私边界写在产品里</p>
+        <h2>不读取未选择的正文，不上传记录，不要求登录。</h2>
+        <p>扩展只保存标题、网址、回看进度、下次回看时间，以及你主动选中的文字。只有你点击图标或快捷键时，它才会出现在当前普通网页。</p>
+        <a class="privacy-link" href="privacy.html">查看完整隐私政策 →</a>
+      </div>
+    </section>
+
+    <section class="feedback-callout" aria-labelledby="feedback-title">
+      <div>
+        <p class="section-tag">一点会继续长大</p>
+        <h2 id="feedback-title">哪里不顺，<br>直接告诉我。</h2>
+        <p>问题、想要的功能，或者一句使用感受都可以。每条反馈都由作者本人看到；可以匿名，想收到回复时再留邮箱。</p>
+      </div>
+      <a class="primary" href="contact.html#feedback">去反馈 →</a>
+    </section>
+
+    <section id="install" class="install">
+      <div class="install-heading">
+        <p class="section-tag">两种安装方式</p>
+        <h2>先选版本，<br>再照着装。</h2>
+        <p class="install-lead">Edge 商店版 1.3.4 已通过审核，功能与官网版一致。Edge 用户建议从商店安装；Chrome 用户或需要手动安装时，选择官网版。</p>
+      </div>
+      <div class="install-choices" aria-label="选择安装方式">
+        <article class="install-choice recommended">
+          <span>推荐给 Edge 用户 · 自动更新</span>
+          <h3>Edge 商店版 1.3.4</h3>
+          <p>已包含近期修复和“今天看一条”等完整功能，后续商店更新由浏览器处理。</p>
+          <a class="primary" href="https://microsoftedge.microsoft.com/addons/detail/mdpemepjnajchhlagfkpggenllebeacd" target="_blank" rel="noopener noreferrer">去 Edge 商店安装</a>
+        </article>
+        <article class="install-choice latest">
+          <span>同版本 · 手动安装</span>
+          <h3>官网版 1.3.4</h3>
+          <p>包含“今天看一条”、搜索归档、免打扰、侧边栏与本地备份。安装包发布在 GitHub Releases，不放在本站目录；当前源码也可直接加载仓库里的 extension 文件夹。更新时需在原文件夹替换并刷新扩展。</p>
+          <a class="secondary" href="https://github.com/endtree-FDE/yidian/releases" target="_blank" rel="noopener noreferrer">到 GitHub Releases 下载</a>
+        </article>
+      </div>
+      <div class="install-guide">
+        <div class="install-guide-heading"><p class="install-guide-label">首次安装官网版</p><h3>下载 1.3.4 后，按这 4 步安装</h3></div>
+        <ol>
+          <li><span>1</span><div><b>下载后先解压</b><p>用上面的按钮打开 GitHub Releases，下载对应版本的 ZIP，右键选择“全部解压”，放进一个以后不会移动的文件夹。安装仓库里的当前 1.3.4 时，直接选择 extension 文件夹，里面应有 manifest.json。</p></div></li>
+          <li><span>2</span><div><b>打开浏览器的扩展页面</b><p>把 edge://extensions 或 chrome://extensions 粘贴到地址栏，按回车；再打开右上角的“开发者模式”。</p></div></li>
+          <li><span>3</span><div><b>选择解压后的文件夹</b><p>点“加载解压缩的扩展”。这里是文件夹选择窗口，ZIP 不会显示；请选择里面直接有 manifest.json 的文件夹。</p></div></li>
+          <li class="pin-step"><span>4</span><div><b>让一点留在浏览器右上角</b><p>点浏览器右上角的“扩展”（拼图图标），找到“一点”，再点右侧的图钉。图钉显示为已固定后，一点图标会留在工具栏；以后直接点它收下网页。</p><div class="pin-path" aria-label="固定一点的操作顺序"><span>扩展</span><i>→</i><span>一点</span><i>→</i><strong aria-label="图钉">📌</strong></div></div></li>
+        </ol>
+      </div>
+      <details class="web-migration">
+        <summary><span>已经装过解压版？</span><strong>在原文件夹更新</strong><i>先导出备份</i></summary>
+        <div>
+          <p>先从旧版“我的收藏”导出备份，再把新版文件放进原来的安装文件夹，覆盖旧文件。到扩展管理页点原来那张“一点”卡片上的“刷新”，核对版本和收藏。不要从新文件夹再点“加载解压缩的扩展”。</p>
+          <p>如果已经加载了多份“一点”，请分别导出备份，再导入保留的那一份；核对记录后才关闭或删除多余的扩展。</p>
+        </div>
+      </details>
+      <details class="web-migration">
+        <summary><span>换一种安装方式？</span><strong>把旧收藏一起带过来</strong><i>两版数据各自保存</i></summary>
+        <div>
+          <p><b>商店版和解压版的收藏分别保存，即使它们都是 1.3.4。</b>从解压版换到商店版，或反过来，先按下面 3 步迁移。原有商店版用户请保留原扩展；更新时若浏览器要求确认权限，按扩展管理页提示完成。</p>
+          <ol>
+            <li><span>1</span><strong>先在原版导出</strong><small>打开原来的一点，在“我的收藏”里点“导出备份”。</small></li>
+            <li><span>2</span><strong>再打开新版</strong><small>在扩展页面关闭旧版，打开要保留的版本；旧版先别删除。</small></li>
+            <li><span>3</span><strong>导入后核对收藏</strong><small>打开新版的“我的收藏”，点“导入备份”，确认记录和进度后再处理旧版。</small></li>
+          </ol>
+          <p class="migration-result"><strong>旧收藏回来了，一点还记得你们见过几次。</strong><small>同一网页只保留一条，原来的回看进度和相见足迹都在。</small></p>
+        </div>
+      </details>
+    </section>
+
+  </main>
+
+  <footer>
+    <p><strong>一点</strong> · 重要的，不只见一次 · 先收下，以后再见。</p>
+    <p><a href="changelog.html">更新记录</a> · <a href="privacy.html">隐私政策</a> · <a href="contact.html">反馈与联系</a> · <a href="contact.html#social">小红书</a></p>
+  </footer>
+  <script src="app.js"></script>
+  <script src="pwa.js"></script>
+</body>
+</html>

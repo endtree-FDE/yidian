@@ -1,0 +1,393 @@
+import { matchesRecordQuery, recordsToMarkdown, selectNextDue } from './domain.mjs';
+import { explainRuntimeError, openExtensions, send } from './runtime.mjs';
+
+const recordsRoot = document.querySelector('#records');
+const status = document.querySelector('#status');
+const template = document.querySelector('#record-template');
+const archiveButton = document.querySelector('#archive-grown');
+const searchInput = document.querySelector('#search');
+const exportLocal = document.querySelector('#export-local');
+const retryLoad = document.querySelector('#retry-load');
+const openExtensionsButton = document.querySelector('#open-extensions');
+const { progress, stepCopy } = globalThis.YIDIAN_COPY;
+const reviewTime = new Intl.DateTimeFormat('zh-CN', {
+  month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
+});
+const encounterTime = new Intl.DateTimeFormat('zh-CN', {
+  month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
+});
+let activeFilter = 'all';
+let activeQuery = '';
+let currentRecords = [];
+let currentArchived = [];
+let todayRecord = null;
+let searchTimer = null;
+let loadRevision = 0;
+
+function encountersFor(record) {
+  return Array.isArray(record.encounters) ? record.encounters : [];
+}
+
+function encounterCount(record) {
+  return encountersFor(record).filter((event) => event.type === 'encounter').length;
+}
+
+function eventCopy(event) {
+  if (event.type === 'saved') return '收下这条';
+  if (event.type === 'encounter') return '途中偶遇，原计划继续';
+  if (event.type === 'restart') return '从今天开始新一轮';
+  if (event.type === 'review') return `完成第 ${Math.max(1, event.stage - 1)} 次回看`;
+  if (event.type === 'used') return `用上了，完成第 ${Math.max(1, event.stage - 1)} 次回看`;
+  if (event.type === 'deferred') return '稍后再看，已推到明天';
+  if (event.type === 'retired') return '不再需要，已收入归档';
+  return '见了一面';
+}
+
+function matchesFilter(record, now) {
+  if (activeFilter === 'due') return record.stage < 4 && record.nextReviewAt <= now;
+  if (activeFilter === 'active') return record.stage < 4;
+  if (activeFilter === 'encountered') return encounterCount(record) > 0;
+  if (activeFilter === 'complete') return record.stage === 4;
+  return true;
+}
+
+function stateLabel(record, now = Date.now()) {
+  if (record.stage === 4) return '回看计划已完成 · 宠物长成';
+  if (record.nextReviewAt <= now) return `今天待回看 · 进度 ${record.stage}/4`;
+  return `等待下次回看 · 进度 ${record.stage}/4`;
+}
+
+function nextLabel(record) {
+  if (record.stage === 4) return '三次回看已经完成';
+  return `下次回看：${reviewTime.format(new Date(record.nextReviewAt))} 后可回看`;
+}
+
+function renderToday(records, now) {
+  todayRecord = selectNextDue(records, now);
+  const card = document.querySelector('#today-card');
+  card.hidden = !todayRecord;
+  if (!todayRecord) return;
+  const dueCount = records.filter((record) => record.stage < 4 && record.nextReviewAt <= now).length;
+  document.querySelector('#today-count').textContent = dueCount > 1 ? `还有 ${dueCount - 1} 条` : '就这一条';
+  document.querySelector('#today-title').textContent = todayRecord.title;
+  document.querySelector('#today-source').textContent = `${todayRecord.sourceDomain} · 已到回看时间 · ${todayRecord.stage}/4`;
+  const excerpt = document.querySelector('#today-excerpt');
+  excerpt.textContent = todayRecord.excerpt ? `“${todayRecord.excerpt}”` : '';
+  excerpt.hidden = !todayRecord.excerpt;
+}
+
+function render(records) {
+  currentRecords = records;
+  const now = Date.now();
+  renderToday(records, now);
+  const archivedView = activeFilter === 'archived';
+  const source = archivedView ? currentArchived : records;
+  const visibleRecords = source.filter((record) => matchesRecordQuery(record, activeQuery) && matchesFilter(record, now));
+  document.querySelector('#total').textContent = records.length;
+  document.querySelector('#due').textContent = records.filter((item) => item.stage < 4 && item.nextReviewAt <= now).length;
+  document.querySelector('#complete').textContent = records.filter((item) => item.stage === 4).length;
+  document.querySelector('#encounters').textContent = records.reduce((total, record) => total + encounterCount(record), 0);
+  archiveButton.disabled = !records.some((item) => item.stage === 4);
+  recordsRoot.replaceChildren();
+  if (!visibleRecords.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    if (archivedView) {
+      empty.textContent = currentArchived.length
+        ? '归档里没有符合搜索的内容。'
+        : '还没有归档。点“归档已完成”，完成回看计划的收藏会收进这里，随时可以带回来。';
+    } else if (!source.length) {
+      const strong = document.createElement('strong');
+      strong.textContent = '从一页值得再看的内容开始';
+      const copy = document.createElement('p');
+      copy.textContent = '打开普通网页，点击浏览器右上角的“一点”图标，再点“替我收好”。下次回看时间会出现在这里。';
+      empty.append(strong, copy);
+    } else {
+      empty.textContent = '这里暂时没有内容。换一个关系状态看看。';
+    }
+    recordsRoot.append(empty);
+    return;
+  }
+  for (const record of visibleRecords) {
+    const node = template.content.firstElementChild.cloneNode(true);
+    node.dataset.url = record.normalizedUrl;
+    node.querySelector('.record-state').textContent = archivedView ? '已归档 · 不再提醒' : stateLabel(record, now);
+    node.querySelector('h2').textContent = record.title;
+    node.querySelector('.record-meta').textContent = archivedView
+      ? `${record.sourceDomain} · 需要时可带回收藏库`
+      : `${record.sourceDomain} · ${nextLabel(record)}`;
+    const excerpt = node.querySelector('.record-excerpt');
+    if (record.excerpt) { excerpt.textContent = `“${record.excerpt}”`; excerpt.hidden = false; }
+    const encounterTotal = encounterCount(record);
+    const encounterSummary = node.querySelector('.encounter-summary');
+    if (encounterTotal) {
+      encounterSummary.textContent = `途中偶遇 ${encounterTotal} 次 · 原来的计划一直在继续`;
+      encounterSummary.hidden = false;
+    }
+    const history = encountersFor(record).toSorted((a, b) => a.at - b.at).slice(-6);
+    const footprints = node.querySelector('.footprints');
+    footprints.hidden = history.length < 2;
+    const list = footprints.querySelector('ol');
+    for (const event of history) {
+      const item = document.createElement('li');
+      item.className = event.type;
+      const time = document.createElement('time');
+      time.dateTime = new Date(event.at).toISOString();
+      time.textContent = encounterTime.format(new Date(event.at));
+      const copy = document.createElement('span');
+      copy.textContent = eventCopy(event);
+      item.append(time, copy);
+      list.append(item);
+    }
+    node.querySelector('.progress span').style.width = `${progress(record.stage)}%`;
+    node.querySelector('.progress').setAttribute('aria-label', `进度 ${record.stage}/4，${stepCopy(record.stage)}，宠物成长 ${progress(record.stage)}%`);
+    node.querySelector('.open').addEventListener('click', () => send({ type:'open-record', url:record.url }).catch(showError));
+    node.querySelector('.delete').addEventListener('click', async () => {
+      if (!confirm(`删除“${record.title}”的本地记录？`)) return;
+      try { await send({ type:'remove-record', normalizedUrl:record.normalizedUrl }); await load('记录已删除'); }
+      catch (error) { showError(error); }
+    });
+    const restore = node.querySelector('.restore');
+    if (archivedView) {
+      restore.hidden = false;
+      restore.addEventListener('click', async () => {
+        try { await send({ type:'restore-record', normalizedUrl:record.normalizedUrl }); await load('已带回收藏库'); }
+        catch (error) { showError(error); }
+      });
+    }
+    recordsRoot.append(node);
+  }
+}
+
+function showError(error) { status.textContent = explainRuntimeError(error); }
+
+function showLoadError(error) {
+  showError(error);
+  status.classList.add('error');
+  document.querySelector('#today-card').hidden = true;
+  for (const selector of ['.tools', '.summary-line', '.toolbar', '.filters', '#records']) {
+    document.querySelector(selector).hidden = true;
+  }
+  retryLoad.hidden = false;
+  exportLocal.hidden = false;
+  openExtensionsButton.hidden = false;
+}
+
+async function load(message = '') {
+  const revision = ++loadRevision;
+  let response;
+  let archivedResponse;
+  try {
+    [response, archivedResponse] = await Promise.all([
+      send({ type:'list-records' }),
+      send({ type:'list-archived' }),
+    ]);
+  } catch (error) {
+    if (revision === loadRevision) throw error;
+    return;
+  }
+  if (revision !== loadRevision) return;
+  currentArchived = archivedResponse.records;
+  const hasAny = response.records.length + currentArchived.length > 0;
+  if (!hasAny) {
+    activeFilter = 'all';
+    for (const button of document.querySelectorAll('.filters button')) {
+      const active = button.dataset.filter === 'all';
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    }
+  }
+  render(response.records);
+  status.classList.remove('error');
+  for (const selector of ['.tools', '#records']) document.querySelector(selector).hidden = false;
+  for (const selector of ['.summary-line', '.toolbar', '.filters']) document.querySelector(selector).hidden = !hasAny;
+  retryLoad.hidden = true;
+  exportLocal.hidden = true;
+  openExtensionsButton.hidden = true;
+  const unreadable = response.unreadableCount
+    ? `${response.unreadableCount} 条旧数据暂时无法显示；请导出备份并保留。`
+    : '';
+  status.textContent = [message, unreadable].filter(Boolean).join(' ');
+}
+
+document.querySelector('#today-open').addEventListener('click', async () => {
+  if (!todayRecord) return;
+  try { await send({ type: 'open-record', url: todayRecord.url }); }
+  catch (error) { showError(error); }
+});
+
+for (const [id, choice, message] of [
+  ['today-used', 'used', (record) => `这次用上了。回看进度 ${record.stage}/4。`],
+  ['today-later', 'later', () => '已推到明天，回看进度不变。'],
+  ['today-retire', 'retire', () => '已收入归档，需要时可以找回。'],
+]) {
+  document.querySelector(`#${id}`).addEventListener('click', async () => {
+    if (!todayRecord) return;
+    const buttons = document.querySelectorAll('.today-actions button');
+    buttons.forEach((button) => { button.disabled = true; });
+    try {
+      const result = await send({ type: 'decide-review', normalizedUrl: todayRecord.normalizedUrl, choice });
+      await load(result.changed ? message(result.record) : '这条已不在待回看列表中。');
+    } catch (error) { showError(error); }
+    finally { buttons.forEach((button) => { button.disabled = false; }); }
+  });
+}
+
+searchInput.addEventListener('input', () => {
+  activeQuery = searchInput.value;
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => render(currentRecords), 150);
+});
+
+archiveButton.addEventListener('click', async () => {
+  if (!confirm('把已完成回看计划的收藏收进归档？它们会从收藏库中隐藏，随时可在“已归档”里找回。')) return;
+  try {
+    const result = await send({ type:'archive-grown' });
+    await load(result.archived ? `已把 ${result.archived} 份完成的收藏收进归档` : '暂时没有可归档的收藏');
+  } catch (error) { showError(error); }
+});
+
+for (const button of document.querySelectorAll('.filters button')) {
+  button.addEventListener('click', () => {
+    activeFilter = button.dataset.filter;
+    for (const item of document.querySelectorAll('.filters button')) {
+      item.classList.toggle('active', item === button);
+      item.setAttribute('aria-pressed', String(item === button));
+    }
+    render(currentRecords);
+  });
+}
+
+function downloadBackup(payload, name = 'backup') {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `yidian-${name}-${new Date().toISOString().slice(0,10)}.json`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+document.querySelector('#export').addEventListener('click', async () => {
+  try {
+    const response = await send({ type:'export-backup' });
+    downloadBackup({
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      records: response.records,
+      archived: response.archived,
+      ...(response.unreadable.length ? { unreadable: response.unreadable } : {}),
+    });
+    status.textContent = `已导出 ${response.records.length} 份收藏、${response.archived.length} 份归档`
+      + (response.unreadable.length ? `，另保留 ${response.unreadable.length} 条暂无法显示的旧数据` : '');
+  } catch (error) { showError(error); }
+});
+
+exportLocal.addEventListener('click', async () => {
+  try {
+    const raw = await chrome.storage.local.get(['records', 'archivedRecords', 'unreadableRecords']);
+    const unreadable = Array.isArray(raw.unreadableRecords)
+      ? [...raw.unreadableRecords]
+      : raw.unreadableRecords === undefined ? [] : [{ source:'unreadableRecords', record:raw.unreadableRecords }];
+    if (raw.records !== undefined && !Array.isArray(raw.records)) unreadable.push({ source:'records', record:raw.records });
+    if (raw.archivedRecords !== undefined && !Array.isArray(raw.archivedRecords)) unreadable.push({ source:'archivedRecords', record:raw.archivedRecords });
+    downloadBackup({
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      records: Array.isArray(raw.records) ? raw.records : [],
+      archived: Array.isArray(raw.archivedRecords) ? raw.archivedRecords : [],
+      ...(unreadable.length ? { unreadable } : {}),
+    }, 'raw-backup');
+    status.textContent = '已导出本机原始备份。先保留这个文件，再刷新扩展。';
+  } catch (error) { showError(error); }
+});
+
+document.querySelector('#export-markdown').addEventListener('click', async () => {
+  try {
+    const [response, archivedResponse] = await Promise.all([
+      send({ type:'list-records' }),
+      send({ type:'list-archived' }),
+    ]);
+    const markdown = recordsToMarkdown({ records: response.records, archived: archivedResponse.records });
+    const blob = new Blob([markdown], { type:'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `yidian-${new Date().toISOString().slice(0,10)}.md`;
+    link.click();
+    URL.revokeObjectURL(url);
+    status.textContent = '已导出 Markdown，可直接放进 Obsidian 或任何笔记库。';
+  } catch (error) { showError(error); }
+});
+
+document.querySelector('#import').addEventListener('change', async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (file.size > 25_000_000) {
+    showError(new Error('备份文件不能超过 25 MB'));
+    event.target.value = '';
+    return;
+  }
+  try {
+    const payload = JSON.parse(await file.text());
+    const result = await send({
+      type:'import-records', records:payload.records ?? payload,
+      archived:payload.archived, unreadable:payload.unreadable,
+    });
+    await load(`已带回 ${result.imported} 份记录，现在共有 ${result.total} 份收藏`);
+  } catch (error) { showError(error); }
+  event.target.value = '';
+});
+
+const notifyToggle = document.querySelector('#notify-toggle');
+const quietToggle = document.querySelector('#quiet-toggle');
+const quietStart = document.querySelector('#quiet-start');
+const quietEnd = document.querySelector('#quiet-end');
+
+function applyQuietControls(quietHours) {
+  quietToggle.checked = Boolean(quietHours.enabled);
+  quietStart.value = quietHours.start;
+  quietEnd.value = quietHours.end;
+  quietStart.disabled = !quietHours.enabled;
+  quietEnd.disabled = !quietHours.enabled;
+}
+
+async function initSettings() {
+  try {
+    const { settings } = await send({ type:'get-settings' });
+    notifyToggle.checked = Boolean(settings.notifyOnDue);
+    applyQuietControls(settings.quietHours);
+  } catch (error) { showError(error); }
+}
+notifyToggle.addEventListener('change', async () => {
+  try {
+    await send({ type:'set-notify-on-due', value:notifyToggle.checked });
+    status.textContent = notifyToggle.checked ? '好，到期时一点会轻轻提醒你。' : '好，一点继续安静地等。';
+  } catch (error) { showError(error); notifyToggle.checked = !notifyToggle.checked; }
+});
+
+async function saveQuietHours() {
+  try {
+    const result = await send({
+      type:'set-quiet-hours',
+      value:{ enabled:quietToggle.checked, start:quietStart.value, end:quietEnd.value },
+    });
+    applyQuietControls(result.settings.quietHours);
+    status.textContent = quietToggle.checked
+      ? `好，${result.settings.quietHours.start} 到 ${result.settings.quietHours.end} 之间不打扰你。`
+      : '好，到期时一点不再分时段安静。';
+  } catch (error) { showError(error); await initSettings(); }
+}
+quietToggle.addEventListener('change', saveQuietHours);
+quietStart.addEventListener('change', saveQuietHours);
+quietEnd.addEventListener('change', saveQuietHours);
+initSettings();
+
+retryLoad.addEventListener('click', () => load().catch(showLoadError));
+openExtensionsButton.addEventListener('click', () => openExtensions().catch(showError));
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local' && ['records', 'archivedRecords', 'unreadableRecords'].some((key) => key in changes)) {
+    load().catch(showLoadError);
+  }
+});
+load().catch(showLoadError);

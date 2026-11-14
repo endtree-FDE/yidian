@@ -1,0 +1,4 @@
+interface:
+  display_name: "一点"
+  short_description: "把重要内容收下，再带回三次重新判断。"
+  default_prompt: "使用 $yidian 收下这条内容，或带我回看一条已经收下的内容。"

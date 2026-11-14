@@ -1,7 +1,7 @@
 .superpowers/
 .worktrees/
 
-# 副本与旧版本目录：唯一权威源是 packages/yidian-1.3.0（已纳入跟踪）
+# 副本与旧版本目录：唯一权威源是 extension/（已纳入跟踪）与 core/
 # 扩展副本与旧版本
 .deploy/
 .diff-work/
@@ -51,6 +51,12 @@ tools/diff-wt-pkg.ps1
 .qoder/
 .preview-assets/
 node_modules/
+output/
+*.bundle
+.playwright-cli/
+
+# scripts/release.ps1 写出的 studio/yidian-<版本>.zip：挂到 GitHub Releases，不进仓库
+*.zip
 
 # 桌面端构建产物（安装包约 116MB，不进仓库）
 packages/yidian-desktop/dist/

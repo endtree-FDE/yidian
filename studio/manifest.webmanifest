@@ -1,0 +1,25 @@
+{
+  "id": "./",
+  "name": "一点｜收藏回看工具",
+  "short_name": "一点",
+  "description": "把值得再看的网页先收下，在第 2、7、30 天安静带回。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fbf8ef",
+  "theme_color": "#f7f3e8",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

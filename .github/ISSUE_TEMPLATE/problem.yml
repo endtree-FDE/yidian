@@ -1,0 +1,44 @@
+name: 使用问题
+description: 报告不好用、不好懂或某个网页失效
+title: "[问题] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        谢谢你把问题留在这里。请不要提交私人内容、账号信息或完整收藏记录。
+  - type: dropdown
+    id: browser
+    attributes:
+      label: 使用的浏览器
+      options:
+        - Chrome
+        - Edge
+        - 其他浏览器（请在下方填写名称）
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 一点版本
+      placeholder: 例如 1.0.0
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: 发生了什么
+      description: 请写清你原本想做什么，以及实际看到了什么。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 怎样再次遇到这个问题
+      placeholder: 1. 打开…… 2. 点击…… 3. 出现……
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: 其他补充
+      description: 可以添加已去除隐私信息的截图或网址。
