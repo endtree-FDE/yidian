@@ -9,10 +9,13 @@ test('Manifest V3 且权限严格等于网页宠物允许列表', () => {
   assert.equal(manifest.version, '1.3.4');
   assert.equal(manifest.name, '一点｜收藏回看工具');
   assert.deepEqual([...manifest.permissions].sort(), ['activeTab','alarms','notifications','scripting','sidePanel','storage','unlimitedStorage'].sort());
-  assert.equal('host_permissions' in manifest, false);
+  // 唯一的主机权限是回环地址：扩展要连本机桌面端的桥。
+  // 没有它，Chrome 会按 Private Network Access 拦掉对 127.0.0.1 的请求。
+  // 不给任何其它站点的主机权限——不读网页、不碰用户的浏览器数据。
+  assert.deepEqual([...(manifest.host_permissions ?? [])], ['http://127.0.0.1/*']);
   assert.equal('content_scripts' in manifest, false);
   assert.deepEqual(Object.keys(manifest).sort(), [
-    'action','background','commands','description','icons','manifest_version',
+    'action','background','commands','description','host_permissions','icons','manifest_version',
     'minimum_chrome_version','name','options_ui','permissions','side_panel','version','web_accessible_resources'
   ].sort());
 });

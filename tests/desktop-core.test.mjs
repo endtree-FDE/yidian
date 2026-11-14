@@ -1,6 +1,6 @@
 // 桌面端核心测试：文件存储 + 平台适配器 + 核心消息层。
 //
-// 这里刻意不启动 Electron：桌面端跑的就是 packages/yidian-core/ 那份语义，
+// 这里刻意不启动 Electron：桌面端跑的就是 core/ 那份语义，
 // 所以「桌面端行为」可以直接在 node 里验。
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,8 +10,8 @@ import path from 'node:path';
 
 import { JsonStore } from '../packages/yidian-desktop/core/store.mjs';
 import { createDesktopPlatform } from '../packages/yidian-desktop/core/platform.mjs';
-import { createMessageLayer } from '../packages/yidian-core/messages.mjs';
-import * as domain from '../packages/yidian-core/domain.mjs';
+import { createMessageLayer } from '../core/messages.mjs';
+import * as domain from '../core/domain.mjs';
 
 async function makeStore() {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'yidian-desktop-'));

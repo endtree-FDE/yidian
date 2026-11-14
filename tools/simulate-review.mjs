@@ -17,7 +17,7 @@ import {
   inQuietHours,
   normalizeUrl,
   nextReviewAtFor,
-} from '../packages/yidian-1.3.0/domain.mjs';
+} from '../extension/domain.mjs';
 
 function parseArgs(argv) {
   const args = { quietStart: '22:00', quietEnd: '08:00', quietDisabled: false, now: new Date().toISOString(), records: null };

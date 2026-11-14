@@ -40,7 +40,7 @@ npm run capture
 用 `createMessageLayer(platform)` 把「存储 / 打开 / 通知 / 闹钟」接到桌面实现上，
 于是「收下 / 回看 / 归档 / 导入 / 到期提醒」两端跑的是同一份 `handleMessage`。
 
-核心与界面的源头在 `packages/yidian-core/` 与 `packages/yidian-1.3.0/`。
+核心与界面的源头在 `core/` 与 `extension/`。
 改了源头要跑一次同步（见下）。
 
 ## 采集通道
@@ -59,7 +59,7 @@ npm run capture
 **桌面端收下的东西是有内容的**：采集时会用 Electron 的 `net.fetch` 抓一次页面，
 把**真实标题**和**页面自己写的一句描述**一起收下（抓不到就退回「域名 · 时间 收藏」的兜底标题，收藏照收）。
 所以桌面端收的链接不再只是一个坐标，回看卡片上有一句能想起来的话。
-解析口径在 `packages/yidian-core/page-meta.mjs`（纯函数，两端共用）。
+解析口径在 `core/page-meta.mjs`（纯函数，两端共用）。
 
 自动化验收：
 

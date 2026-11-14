@@ -23,7 +23,7 @@ import {
   MAX_NOTE_LENGTH,
   matchesRecordQuery,
   recordsToMarkdown,
-} from '../packages/yidian-core/domain.mjs';
+} from '../core/domain.mjs';
 
 const NOW = Date.parse('2026-08-19T04:00:00Z'); // 北京墙钟 12:00
 

@@ -1,6 +1,6 @@
 // 桌面端的平台适配器：把 Electron 的能力接成核心要的 platform。
 //
-// 核心（packages/yidian-core/messages.mjs）不关心自己是跑在浏览器还是桌面，
+// 核心（core/messages.mjs）不关心自己是跑在浏览器还是桌面，
 // 这里负责回答它提的几个问题：存哪儿、怎么打开网页、怎么弹通知。
 export function createDesktopPlatform({
   store,

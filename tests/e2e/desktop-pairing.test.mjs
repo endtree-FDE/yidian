@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const EXTENSION_PATH = path.join(ROOT, 'packages', 'yidian-1.3.0');
+const EXTENSION_PATH = path.join(ROOT, 'extension');
 const DESKTOP_DIR = path.join(ROOT, 'packages', 'yidian-desktop');
 
 function waitFor(predicate, { timeout = 30_000, interval = 200, label = '条件' } = {}) {

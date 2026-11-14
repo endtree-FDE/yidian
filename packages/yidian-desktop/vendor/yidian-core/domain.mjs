@@ -9,7 +9,7 @@ export const MAX_ENCOUNTERS = 100;
 export const ENCOUNTER_COOLDOWN_MS = 10 * 60_000;
 export const STAGE_PERCENT = Object.freeze({ 1: 25, 2: 50, 3: 75, 4: 100 });
 const NEXT_INTERVAL_DAYS = Object.freeze({ 1: 1, 2: 5, 3: 23 });
-const ENCOUNTER_TYPES = new Set(['saved', 'review', 'encounter', 'restart']);
+const ENCOUNTER_TYPES = new Set(['saved', 'review', 'used', 'deferred', 'retired', 'encounter', 'restart']);
 const TRACKING_PARAM = /^(utm_.+|fbclid|gclid|dclid|msclkid|mc_cid|mc_eid|igshid|yclid|_hsenc|_hsmi|ocid|wt\.mc_id)$/i;
 
 export function parseWebUrl(rawUrl) {
@@ -115,7 +115,8 @@ export function isDue(record, now = Date.now()) {
   return record.stage < MAX_STAGE && Number.isFinite(record.nextReviewAt) && record.nextReviewAt <= now;
 }
 
-export function advanceRecord(record, now = Date.now()) {
+export function advanceRecord(record, now = Date.now(), outcome = 'review') {
+  if (outcome !== 'review' && outcome !== 'used') throw new TypeError('Unknown review outcome');
   if (record.stage >= MAX_STAGE) return { changed: false, reason: 'complete', record };
   if (!isDue(record, now)) return { changed: false, reason: 'not_due', record };
   const stage = Math.min(MAX_STAGE, record.stage + 1);
@@ -129,8 +130,14 @@ export function advanceRecord(record, now = Date.now()) {
   return {
     changed: true,
     reason: 'advanced',
-    record: addEncounter(advanced, { type: 'review', now }),
+    record: addEncounter(advanced, { type: outcome, now }),
   };
+}
+
+export function deferRecord(record, now = Date.now()) {
+  if (!isDue(record, now)) return { changed: false, reason: 'not_due', record };
+  const deferred = { ...record, nextReviewAt: now + DAY_MS };
+  return { changed: true, record: addEncounter(deferred, { type: 'deferred', now }) };
 }
 
 export function restartRecord(record, now = Date.now()) {
@@ -222,8 +229,15 @@ export function encounterCount(record) {
 }
 export function consolidateRecords(records) {
   const groups = new Map();
-  let changed = false;
-  for (const record of records) {
+  let changed = !Array.isArray(records) && records !== undefined;
+  const rejected = [];
+  if (!Array.isArray(records) && records !== undefined) rejected.push(records);
+  for (const record of Array.isArray(records) ? records : []) {
+    if (!record || typeof record !== 'object' || Array.isArray(record)) {
+      rejected.push(record);
+      changed = true;
+      continue;
+    }
     const identityUrl = record.canonicalUrl || record.url || record.normalizedUrl;
     let normalizedUrl;
     let sourceDomainValue;
@@ -231,7 +245,7 @@ export function consolidateRecords(records) {
       normalizedUrl = normalizeUrl(identityUrl);
       sourceDomainValue = sourceDomain(record.url || identityUrl);
     } catch {
-      // 无效 URL 的记录：跳过并标记已变更，避免一条坏数据拖垮整个列表
+      rejected.push(record);
       changed = true;
       continue;
     }
@@ -293,7 +307,7 @@ export function consolidateRecords(records) {
       masterNormalizedUrl = normalizeUrl(masterUrl);
       masterSourceDomain = sourceDomain(master.url || masterUrl);
     } catch {
-      // 分组时已校验，理论上不可达；兜底跳过避免崩溃
+      rejected.push(...group);
       changed = true;
       continue;
     }
@@ -315,7 +329,7 @@ export function consolidateRecords(records) {
       mergedCount += group.length - 1;
     }
   }
-  return { records: merged, changed, mergedCount };
+  return { records: merged, changed, mergedCount, rejected };
 }
 
 // 按 normalizedUrl 合并两个记录集，同一键取 updatedAt 更新的一条。
@@ -344,7 +358,7 @@ export function normalizeImportedRecord(record, now = Date.now()) {
   const encounters = Array.isArray(record.encounters) ? record.encounters : [];
   if (canonicalUrl.length > 4096 || encounters.length > MAX_ENCOUNTERS) throw new TypeError('Backup encounter history is too large');
   for (const event of encounters) {
-    if (!event || !['saved', 'review', 'encounter', 'restart'].includes(event.type)
+    if (!event || !ENCOUNTER_TYPES.has(event.type)
       || !Number.isFinite(event.at) || String(event.excerpt || '').length > MAX_EXCERPT_LENGTH) {
       throw new TypeError('Backup contains an invalid encounter');
     }
@@ -371,7 +385,9 @@ export function normalizeImportedRecord(record, now = Date.now()) {
       ? null
       : (Number.isFinite(record.nextReviewAt) ? record.nextReviewAt : nextReviewAtFor(stage, completedAt)),
     createdAt,
-    updatedAt: Number.isFinite(record.updatedAt) ? record.updatedAt : completedAt,
+    updatedAt: Number.isFinite(record.updatedAt) ? record.updatedAt
+      : Number.isFinite(record.completedAt) ? record.completedAt
+        : Number.isFinite(record.createdAt) ? record.createdAt : 0,
     skinId,
     encounters,
   };
@@ -469,7 +485,7 @@ export function summarizeRecords(records) {
 
 // Markdown 序列化：每条记录一段，frontmatter 元信息 + 选段 + 足迹。
 // 跨宿主共用：扩展导出、CLI、Obsidian 插件都走这一份输出。
-const EVENT_LABELS = { saved: '收下', review: '回看', encounter: '途中偶遇', restart: '重新开始' };
+const EVENT_LABELS = { saved: '收下', review: '回看', used: '用上了', deferred: '稍后再看', retired: '不再需要', encounter: '途中偶遇', restart: '重新开始' };
 
 export function recordsToMarkdown({ records = [], archived = [], exportedAt = new Date().toISOString() } = {}) {
   const day = (value) => (Number.isFinite(value) ? new Date(value).toISOString().slice(0, 10) : '');

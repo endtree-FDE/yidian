@@ -112,7 +112,7 @@ function isAllowedOrigin(origin) {
 └────────────────────┘                └────────────────────────┘
 ```
 
-**协议**（两端共用一份，放在 `packages/yidian-core/bridge-protocol.mjs`）：
+**协议**（两端共用一份，放在 `core/bridge-protocol.mjs`）：
 
 | 端点 | 需要什么 | 回什么 |
 |---|---|---|

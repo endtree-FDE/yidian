@@ -333,7 +333,8 @@ test('侧边栏可向已注入的宠物读取当前网页身份', async () => {
 test('到期卡片明确显示状态、进度和完成动作', async () => {
   const harness = createHarness({ record, due: true });
   await harness.flush();
-  assert.match(harness.hook.card.innerHTML, /它回来啦。今天再见一面/);
+  // 「回」在站酷小薇体里是实心方块，大字文案避开它（见 tests/font-guard.test.mjs）
+  assert.match(harness.hook.card.innerHTML, /它来啦。今天再见一面/);
   assert.match(harness.hook.card.innerHTML, /进度 1\/4/);
   assert.match(harness.hook.card.innerHTML, /相见 1\/4/);
   assert.match(harness.hook.card.innerHTML, /已收下 · 下一步是第 1 次回看/);

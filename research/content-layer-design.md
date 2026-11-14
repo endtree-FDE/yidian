@@ -9,7 +9,7 @@
 
 ## 1. 改之前：内容这一层的真实状态
 
-记录里到底有什么（`packages/yidian-core/domain.mjs` 的 `createRecord`）：
+记录里到底有什么（`core/domain.mjs` 的 `createRecord`）：
 
 | 有 | 没有 |
 |---|---|
@@ -55,7 +55,7 @@ Raindrop 还会顺手存一份正文快照。
    两者混在一个字段里会出两个问题：自动抓来的描述会盖掉用户先前选的段落；卡片上分不清哪句是你的、哪句是页面的。
 
 2. **抓取与解析拆开。**
-   `packages/yidian-core/page-meta.mjs` 是纯函数（HTML 字符串 → 标题/描述/canonical），不碰网络也不碰 DOM，所以能被单测直接覆盖；
+   `core/page-meta.mjs` 是纯函数（HTML 字符串 → 标题/描述/canonical），不碰网络也不碰 DOM，所以能被单测直接覆盖；
    网络那一段留在各端：桌面端用 Electron 的 `net.fetch`，扩展端直接读 DOM 的 `meta` 标签。
    桌面端自己再加一层 `core/capture.mjs`（链接 → 一条待收下的记录），单测里塞一个假的 `fetchMeta` 就能跑完整条链路，不用真联网。
 

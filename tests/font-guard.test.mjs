@@ -14,16 +14,16 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
-const fontPath = path.join(root, 'packages', 'yidian-1.3.0', 'fonts', 'ZCOOLXiaoWei-Regular.ttf');
+const fontPath = path.join(root, 'extension', 'fonts', 'ZCOOLXiaoWei-Regular.ttf');
 
 // 重新生成子集后，用 tools/build-font-subset.py 的输出更新这里。
-const FONT_SHA256 = '33b08f8ed839dfb4759bb08edb046c61b66d738c7e8efb26916165c312eca9ed';
+const FONT_SHA256 = '6a74459b62e483cd6bfb2131cdbc9b39453db0895845021ab8e6cc4d85523812';
 
 // 会被大字渲染的文案来源
 const UI_SOURCES = [
-  path.join(root, 'packages', 'yidian-1.3.0', 'pet.js'),
+  path.join(root, 'extension', 'pet.js'),
   path.join(root, 'packages', 'yidian-desktop', 'renderer', 'card.js'),
-  path.join(root, 'packages', 'yidian-1.3.0', 'shared.js'),
+  path.join(root, 'extension', 'shared.js'),
 ];
 
 /** 读出 TTF 的 cmap，返回覆盖的码位集合。 */

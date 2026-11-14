@@ -13,9 +13,9 @@ import { createBridgeServer } from '../packages/yidian-desktop/core/bridge-serve
 import { createBridgeRoute } from '../packages/yidian-desktop/core/bridge-route.mjs';
 import { createPairingManager } from '../packages/yidian-desktop/core/pairing.mjs';
 import { createDesktopPlatform } from '../packages/yidian-desktop/core/platform.mjs';
-import { createMessageLayer } from '../packages/yidian-core/messages.mjs';
-import { createBridgeClient } from '../packages/yidian-1.3.0/bridge-client.mjs';
-import { EXTENSION_HEADER, TOKEN_HEADER } from '../packages/yidian-core/bridge-protocol.mjs';
+import { createMessageLayer } from '../core/messages.mjs';
+import { createBridgeClient } from '../extension/bridge-client.mjs';
+import { EXTENSION_HEADER, TOKEN_HEADER } from '../core/bridge-protocol.mjs';
 
 const EXT_A = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const EXT_B = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';

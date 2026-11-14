@@ -28,11 +28,11 @@
 - 业务逻辑仍住在扩展包里 → 扩展一旦冻结，桌面端就没法独立演进；
 - 「谁在管业务」说不清。
 
-所以这一轮把核心抽出来：`packages/yidian-core/` 是**业务语义源头**，扩展与桌面端各自降级为**适配器**。
+所以这一轮把核心抽出来：`core/` 是**业务语义源头**，扩展与桌面端各自降级为**适配器**。
 
 ## 1. 架构总原则：业务逻辑零重复
 
-核心资产只有两处，都在 `packages/yidian-core/`：
+核心资产只有两处，都在 `core/`：
 
 | 文件 | 职责 | 约束 |
 |---|---|---|
@@ -60,7 +60,7 @@ platform = {
 
 | 端 | 适配器 | 独有能力 |
 |---|---|---|
-| 扩展 | `packages/yidian-1.3.0/service-worker.mjs` | 角标、内容脚本注入、浏览器快捷键、侧边栏、扩展桥同步 |
+| 扩展 | `extension/service-worker.mjs` | 角标、内容脚本注入、浏览器快捷键、侧边栏、扩展桥同步 |
 | 桌面端 | `packages/yidian-desktop/core/platform.mjs` | 托盘、置顶宠物窗、卡片窗、收藏库窗、全局热键、本地桥、开机自启 |
 
 `tests/core-sync.test.mjs` 同时守三件事：副本一字不差、桌面端不再 import 扩展 SW、扩展里不再残留业务函数。
@@ -194,7 +194,7 @@ Windows 上**拿不到别的应用的 URL**——只能拿到窗口标题，做�
 ## 7. 扩展侧的最小改动
 
 1. `manifest.json` 增加 `host_permissions: ["http://127.0.0.1/*"]`。
-2. 新增 `packages/yidian-1.3.0/bridge-client.mjs`：
+2. 新增 `extension/bridge-client.mjs`：
    探活 `/ping`（失败静默，负缓存 30 秒）、配对 `/pair`、推 `/records`、拉 `/state`、发 `/events`。
 3. `service-worker.mjs`：
    - 重写为**适配器**：调用 `createMessageLayer(createExtensionPlatform())`，自身只留 chrome 独有能力；

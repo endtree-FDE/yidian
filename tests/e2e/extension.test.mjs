@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const EXTENSION_PATH = path.join(ROOT, 'packages', 'yidian-1.3.0');
+const EXTENSION_PATH = path.join(ROOT, 'extension');
 const PAIR_CODE = '123456';
 const PAIR_TOKEN = 'e2e-pair-token';
 

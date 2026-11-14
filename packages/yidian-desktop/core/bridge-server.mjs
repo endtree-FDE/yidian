@@ -68,6 +68,9 @@ export function createBridgeServer({ route, ports = DEFAULT_BRIDGE_PORTS, logger
       cors['access-control-allow-methods'] = 'GET,POST,OPTIONS';
       cors['access-control-allow-headers'] = 'content-type,x-yidian-token,x-yidian-extension';
       cors['access-control-max-age'] = '600';
+      // 扩展的来源算「公网」，回环地址算「本地网络」：Chrome 的 Private Network Access
+      // 会先发预检，回应里必须明确允许访问本地网络，否则请求在浏览器里就被拦掉。
+      cors['access-control-allow-private-network'] = 'true';
       cors.vary = 'Origin';
     }
 

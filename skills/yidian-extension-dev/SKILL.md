@@ -1,6 +1,6 @@
 ---
 name: yidian-extension-dev
-description: 一点（yidian）Chrome/Edge MV3 收藏回看扩展 + 桌面常驻端的开发与发布守则。当在 c:\12730 仓库修改 packages/yidian-core / packages/yidian-1.3.0 / packages/yidian-desktop 源码、调试到期提醒/免打扰/通知链路、同步共享副本、做本地自测、或准备 Edge 商店上架、桌面端打包与版本发布时使用。内含本项目实测踩坑：alarm 下限、墙钟时间口径、storage 迁移、注入兜底、副本漂移与发布清单。
+description: 一点（yidian）Chrome/Edge MV3 收藏回看扩展 + 桌面常驻端的开发与发布守则。当在 c:\12730 仓库修改 core / extension / packages/yidian-desktop 源码、调试到期提醒/免打扰/通知链路、同步共享副本、做本地自测、或准备 Edge 商店上架、桌面端打包与版本发布时使用。内含本项目实测踩坑：alarm 下限、墙钟时间口径、storage 迁移、注入兜底、副本漂移与发布清单。
 ---
 
 # yidian-extension-dev
@@ -13,24 +13,24 @@ description: 一点（yidian）Chrome/Edge MV3 收藏回看扩展 + 桌面常驻
 
 | 位置 | 角色 | 说明 |
 |---|---|---|
-| `packages/yidian-core/` | **业务语义源头** | `domain.mjs`（纯函数领域层）+ `messages.mjs`（平台无关消息层） |
-| `packages/yidian-1.3.0/` | 扩展发行物 | 扩展自己的适配器（`service-worker.mjs`）+ core 副本 + 界面源文件 |
+| `core/` | **业务语义源头** | `domain.mjs`（纯函数领域层）+ `messages.mjs`（平台无关消息层） |
+| `extension/` | 扩展发行物 | 扩展自己的适配器（`service-worker.mjs`）+ core 副本 + 界面源文件 |
 | `packages/yidian-desktop/` | 桌面发行物 | 桌面适配器 + `vendor/yidian-core/`（core 副本）+ `assets/bundle/`（界面副本） |
 
 **为什么必须留副本**：扩展被浏览器沙箱限制只能 import 自己目录内的文件；桌面端打包后不能依赖仓库里的兄弟目录。所以 `tools/sync-shared.mjs` 从源同步出三处副本：
 
-- 改完 `packages/yidian-core/` 或扩展包里的界面文件后，**必跑** `node tools/sync-shared.mjs`（`--check` 只校验）。
+- 改完 `core/` 或扩展包里的界面文件后，**必跑** `node tools/sync-shared.mjs`（`--check` 只校验）。
 - `tests/core-sync.test.mjs` 守住「一字不差」，同时断言桌面端不再 import 扩展的 SW、扩展里不再有业务函数。**副本被手改 = 测试红**。
-- 扩展发行 zip 必须从 `packages/yidian-1.3.0/` 重新打包（副本已包含在内）。
+- 扩展发行 zip 必须从 `extension/` 重新打包（副本已包含在内）。
 
 旧版本目录、`.deploy/`、`.diff-work/`、worktree 副本全部被 .gitignore 排除。用户习惯从 packages 目录以未打包扩展方式本地安装测试。
 
 ## 架构口径
 
-- `packages/yidian-core/domain.mjs` 是纯函数领域层，所有时间函数带 `now = Date.now()` 注入点；时间相关逻辑必须可注入、可被 `node --test` 覆盖，**禁止在领域层触碰 chrome.* 或 electron**。
-- `packages/yidian-core/messages.mjs` 是平台无关的消息层：`createMessageLayer(platform)` 统一实现 handleMessage / maybeNotifyDue / scheduleNext / refreshBadge / openNotifiedRecord / getRecords 等。平台能力通过 platform 参数注入：`storage / openUrl / openLibrary / notify / clearNotification / setAlarm / clearAlarm / setBadge? / onRecordsChanged? / now?`。
-- `packages/yidian-core/bridge-protocol.mjs` 是**双端桥协议**（扩展 ↔ 桌面端）：端点路径、配对码规则、token 头名、扩展身份头、记录指纹。两端共用一份，同步出副本。
-- `packages/yidian-core/page-meta.mjs` 是**页面元信息层**（纯函数）：HTML 字符串 → 标题 / 一句描述 / canonical，含 GBK 等编码识别。各端各接各的网络：桌面端用 Electron 的 `net.fetch`，扩展端直接读 DOM 的 `meta` 标签。
+- `core/domain.mjs` 是纯函数领域层，所有时间函数带 `now = Date.now()` 注入点；时间相关逻辑必须可注入、可被 `node --test` 覆盖，**禁止在领域层触碰 chrome.* 或 electron**。
+- `core/messages.mjs` 是平台无关的消息层：`createMessageLayer(platform)` 统一实现 handleMessage / maybeNotifyDue / scheduleNext / refreshBadge / openNotifiedRecord / getRecords 等。平台能力通过 platform 参数注入：`storage / openUrl / openLibrary / notify / clearNotification / setAlarm / clearAlarm / setBadge? / onRecordsChanged? / now?`。
+- `core/bridge-protocol.mjs` 是**双端桥协议**（扩展 ↔ 桌面端）：端点路径、配对码规则、token 头名、扩展身份头、记录指纹。两端共用一份，同步出副本。
+- `core/page-meta.mjs` 是**页面元信息层**（纯函数）：HTML 字符串 → 标题 / 一句描述 / canonical，含 GBK 等编码识别。各端各接各的网络：桌面端用 Electron 的 `net.fetch`，扩展端直接读 DOM 的 `meta` 标签。
 - **内容层口径**：`excerpt` = 用户亲手选的那段（带引号呈现）；`summary` = 页面自己写的那句描述（左侧竖线）；`note` = **用户自己写的那句批注**（蜜桃色竖线）。三者分开放，不混 —— 混了自动描述会盖掉用户选的段落。**呈现优先级：批注 > 选段 > 描述**（你的话最前）。合并时**真标题优先于兜底标题**（`isAutoTitle()` 靠比对兜底标题格式判定，不往记录里塞额外字段）。标题/描述/选段不受十分钟冷却限制，冷却只管「足迹记不记」；写批注（`set-note`）也不算一次「相见」。
 - **各端只写适配器**：扩展的 `service-worker.mjs` 与桌面端的 `core/platform.mjs` 都只做「chrome / electron 能力对接 + 该端独有能力」，业务逻辑一律回核心层。扩展独有能力：角标、注入、快捷键、侧边栏；桌面独有能力：托盘、置顶窗、全局热键、系统通知。
 - 时区口径统一为 Asia/Shanghai 墙钟：免打扰判定（inQuietHours）、分日去重（dayKeyFor，用 en-CA locale 取 YYYY-MM-DD）、静默结束时刻（quietEndAt）。不要用 toISOString().slice(0,10) 分日（那是 UTC）。

@@ -10,7 +10,7 @@ import {
   decodePageBytes,
   detectCharset,
   extractMetaFromHtml,
-} from '../packages/yidian-core/page-meta.mjs';
+} from '../core/page-meta.mjs';
 
 test('extractMetaFromHtml：取 <title>、description、canonical', () => {
   const html = `

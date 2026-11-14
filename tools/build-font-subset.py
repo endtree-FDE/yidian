@@ -24,14 +24,14 @@ from fontTools.ttLib import TTFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..'))
-FONTS_DIR = os.path.join(ROOT, 'packages', 'yidian-1.3.0', 'fonts')
+FONTS_DIR = os.path.join(ROOT, 'extension', 'fonts')
 TARGET = os.path.join(FONTS_DIR, 'ZCOOLXiaoWei-Regular.ttf')
 
 # 会用大字渲染的界面文案来源
 UI_SOURCES = [
-    os.path.join(ROOT, 'packages', 'yidian-1.3.0', 'pet.js'),
+    os.path.join(ROOT, 'extension', 'pet.js'),
     os.path.join(ROOT, 'packages', 'yidian-desktop', 'renderer', 'card.js'),
-    os.path.join(ROOT, 'packages', 'yidian-1.3.0', 'shared.js'),
+    os.path.join(ROOT, 'extension', 'shared.js'),
 ]
 
 # 这些标点本来就是小圆点/方点，不算「方块字」

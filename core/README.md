@@ -26,11 +26,11 @@ createMessageLayer({
 });
 ```
 
-- **扩展**：`packages/yidian-1.3.0/service-worker.mjs`（把 `chrome.*` 接成 platform）
+- **扩展**：`extension/service-worker.mjs`（把 `chrome.*` 接成 platform）
 - **桌面端**：`packages/yidian-desktop/main.mjs`（把 Electron 接成 platform）
 
 ## 扩展包里的副本
 
-扩展被浏览器沙箱限制，只能 import 自己目录下的文件，所以 `packages/yidian-1.3.0/`
+扩展被浏览器沙箱限制，只能 import 自己目录下的文件，所以 `extension/`
 里保留一份 `domain.mjs` / `messages.mjs` 副本，由 `node tools/sync-core.mjs` 生成，
 `tests/core-sync.test.mjs` 守住「副本与核心一字不差」。**改核心后记得同步。**

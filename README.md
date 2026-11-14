@@ -12,15 +12,17 @@
 
 浏览器里运行的是 `extension/`。节奏、网址归一和记录规则写在 `core/domain.mjs`，并按字节复制到 `extension/domain.mjs`。`tests/core-sync.test.mjs` 会核对这两份文件是否一致。
 
-- `core/`：与界面无关的领域逻辑。`domain.mjs` 负责网址规范化、1/2/7/30 的回看节奏、进度推进、免打扰、搜索、统计和 Markdown 导出。`adapter.mjs` 约定 `readRecords`、`writeRecords`、`readSettings`、`writeSettings`，并提供内存适配器与 JSON 文件适配器，给扩展以外的宿主使用。扩展本身直接读写 `chrome.storage.local`。
-- `extension/`：Manifest V3 扩展，版本写在 `manifest.json`，与 `package.json` 同为 `1.3.4`。`service-worker.mjs` 是模块化后台，处理收藏、闹钟、工具栏数字、可选通知和消息。用户点击图标或快捷键时，后台用 `scripting` 把 `pet.js` 注入当前普通网页；清单里没有常驻内容脚本，也没有 `host_permissions`。`sidepanel.html` 显示打开时的网页状态，`library.html` 是“我的收藏”，同时作为选项页，`stats.html` 是本地回看统计。`runtime.mjs` 把后台连接失败转成中文说明，并打开当前浏览器的扩展管理页。`shared.js` 只放文案。图标在 `icons/`，宠物对白使用 `fonts/` 里的站酷小薇体。
+- `core/`：与界面无关的领域逻辑。`domain.mjs` 负责网址规范化、1/2/7/30 的回看节奏、进度推进、免打扰、搜索、统计和 Markdown 导出。`messages.mjs` 是共享的消息层：收下、回看、归档、导入、导出、设置、到期提醒都在这里，扩展与桌面端共用同一份实现。`adapter.mjs` 约定 `readRecords`、`writeRecords`、`readSettings`、`writeSettings`，并提供内存适配器与 JSON 文件适配器，给扩展以外的宿主使用。`page-meta.mjs` 从页面 HTML 里取标题与一句描述（抓取与解析分离，纯函数可单测）。`bridge-protocol.mjs` 约定扩展与桌面端之间的本地桥协议。扩展本身直接读写 `chrome.storage.local`。
+- `extension/`：Manifest V3 扩展，版本写在 `manifest.json`，与 `package.json` 同为 `1.3.4`。`service-worker.mjs` 是模块化后台，只做适配：把 `chrome.*` 接成消息层要的 platform，注册浏览器独有能力（工具栏角标、标签页注入、快捷键、侧边栏），并与桌面端的本地桥同步。`messages.mjs`、`domain.mjs`、`page-meta.mjs`、`bridge-protocol.mjs` 是 `core/` 的逐字节副本（扩展沙箱只能读自己目录），由 `tools/sync-shared.mjs` 同步。用户点击图标或快捷键时，后台用 `scripting` 把 `pet.js` 注入当前普通网页；清单里没有常驻内容脚本。`sidepanel.html` 显示打开时的网页状态，`library.html` 是“我的收藏”，同时作为选项页，`stats.html` 是本地回看统计。`runtime.mjs` 把后台连接失败转成中文说明，并打开当前浏览器的扩展管理页。`shared.js` 只放文案。图标在 `icons/`，宠物对白使用 `fonts/` 里的站酷小薇体。
+- `packages/yidian-desktop/`：桌面常驻层（Electron），产品方向上的主产品——扩展是采集器，桌面端是常驻的那一半。它有自己的采集通道、置顶宠物、托盘、系统提醒，以及与扩展之间的本地桥（配对码换 token）。Windows 安装包可以本地构建，**尚未对外分发**：没有代码签名与公证，macOS 未实跑，没有自动更新。设计与取舍见 `research/desktop-layer-design.md`。
 - `studio/`：ModelScope Static 创空间。`studio/README.md` 声明 `sdk: static`，入口是 `index.html`。首页包含互动演示、安装说明和隐私摘要，另有 `changelog.html`、`privacy.html`、`contact.html`。`app.js` 负责演示，`pwa.js` 与 `service-worker.js` 提供离线外壳。本目录不存放扩展安装包。
-- `tests/`：用 Node 内置测试运行器覆盖领域规则、后台消息、侧边栏、收藏库、宠物、清单和创空间页面。`tests/e2e/upgrade.mjs` 用 Playwright 做真实浏览器里的升级检查，不包含在 `npm test` 里。
+- `tests/`：用 Node 内置测试运行器覆盖领域规则、后台消息、侧边栏、收藏库、宠物、清单、创空间页面，以及桌面端的桥接、采集与核心副本一致性。`tests/e2e/` 下的脚本用 Playwright 做真实浏览器（和真实打包版）检查，不包含在 `npm test` 里。
 - `scripts/`：`release.ps1` 在检查通过后，把 `extension/` 打成 ZIP，写到 `studio/yidian-<版本>.zip`。这个文件被 Git 忽略。
 - `skills/`：`skills/yidian/SKILL.md` 给编程助手使用，在对话里执行“收下”和“回看”。它与浏览器扩展分开，记录可以写到当前目录的《一点记录.md》。
+- `research/`：产品与技术设计文档（桌面层、内容层、回看交付物的调研与取舍）。
 - `docs/`：品牌讨论、发布核对和手工验收记录。安装和发布以本说明以及当前源码为准。
 
-清单里的快捷键：`Ctrl+Shift+Y`（macOS 为 `Command+Shift+Y`）收下当前网页或选段；`Alt+Shift+Y`（macOS 为 `MacCtrl+Shift+Y`）打开侧边栏。`minimum_chrome_version` 为 116。权限是 `activeTab`、`alarms`、`notifications`、`scripting`、`sidePanel`、`storage`、`unlimitedStorage`。
+清单里的快捷键：`Ctrl+Shift+Y`（macOS 为 `Command+Shift+Y`）收下当前网页或选段；`Alt+Shift+Y`（macOS 为 `MacCtrl+Shift+Y`）打开侧边栏。`minimum_chrome_version` 为 116。权限是 `activeTab`、`alarms`、`notifications`、`scripting`、`sidePanel`、`storage`、`unlimitedStorage`；主机权限只有 `http://127.0.0.1/*` 一条——扩展要连本机桌面端的桥，没有别的站点。
 
 ## 安装
 

@@ -8,7 +8,9 @@ const asar = require('@electron/asar');
 
 const desktopDir = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\//, '')), '..');
 const packedAsar = path.join(desktopDir, 'dist', 'win-unpacked', 'resources', 'app.asar');
-const tempAsar = path.join(process.env.TEMP, 'yidian-dist5', 'win-unpacked', 'resources', 'app.asar');
+// 本次构建的输出目录（用来核对 asar 与构建产物逐字节一致）
+const buildDir = process.env.YIDIAN_BUILD_DIR || 'yidian-dist7';
+const tempAsar = path.join(process.env.TEMP, buildDir, 'win-unpacked', 'resources', 'app.asar');
 
 const checks = [
   ['assets/bundle/domain.mjs', (text) => text.includes('mergeByKey'), '含 mergeByKey'],

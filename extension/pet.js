@@ -38,10 +38,32 @@
   let idleUntil = performance.now() + 1400;
   let toastTimer = null;
 
+  // 页面自己的一句话简介。没有选中文字时，拿它当默认摘录 ——
+  // 否则随手收下的链接只剩一个标题，回看时等于没带回来东西。
+  function metaSummary() {
+    const selectors = [
+      'meta[name="description" i]',
+      'meta[property="og:description" i]',
+      'meta[name="twitter:description" i]',
+      'meta[itemprop="description" i]',
+    ];
+    for (const selector of selectors) {
+      const content = String(document.querySelector(selector)?.getAttribute('content') || '').trim();
+      if (content) return content.slice(0, 300);
+    }
+    return '';
+  }
   function page() {
     const excerpt = String(globalThis.getSelection?.()?.toString() ?? '').trim().slice(0, 1000);
     const canonicalUrl = document.querySelector?.('link[rel="canonical"]')?.href || '';
-    return { title: document.title || '', url: location.href, ...(canonicalUrl ? { canonicalUrl } : {}), ...(excerpt ? { excerpt } : {}) };
+    const summary = metaSummary();
+    return {
+      title: document.title || '',
+      url: location.href,
+      ...(canonicalUrl ? { canonicalUrl } : {}),
+      ...(excerpt ? { excerpt } : {}),
+      ...(summary ? { summary } : {}),
+    };
   }
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -91,7 +113,16 @@
     const currentRecord = state?.currentRecord ?? null;
     const isCurrent = Boolean(record && currentRecord?.normalizedUrl === record.normalizedUrl);
     const liveExcerpt = page().excerpt || '';
+    const liveSummary = page().summary || '';
     const excerpt = (isCurrent && liveExcerpt) || record?.excerpt || liveExcerpt;
+    const summary = record?.summary || liveSummary;
+    // 有选段就显示选段（那是用户亲手挑的）；没有就退回页面的一句话描述。
+    // 用户自己写的那句排最前面：你的话 > 你选的段落 > 页面的话。
+    const contentLine = record?.note
+      ? `<p class="o-note">“${escapeHtml(record.note)}”</p>`
+      : excerpt
+        ? `<p class="o-excerpt">“${escapeHtml(excerpt)}”</p>`
+        : summary ? `<p class="o-summary">${escapeHtml(summary)}</p>` : '';
     const encounterTotal = record?.encounters?.filter((event) => event.type === 'encounter').length ?? 0;
     const canEncounter = Boolean(state?.canEncounter);
     pet.dataset.stage = String(stage);
@@ -99,11 +130,12 @@
     liquid.style.height = `${progress(stage)}%`;
     const domain = location.hostname.replace(/^www\./,'') || '当前页面';
     if (!record) {
-      card.innerHTML = `<div class="o-head"><p class="o-eyebrow">一点悄悄说</p><p class="o-say">这页，好像还想再见你。</p><h2 class="o-title">${escapeHtml(document.title || domain)}</h2><p class="o-meta">${escapeHtml(domain)}</p></div>${excerpt ? `<p class="o-excerpt">“${escapeHtml(excerpt)}”</p>` : ''}<div class="o-progress" style="--o-progress:0%"><div><strong>今天先收下</strong><span>往后再见 3 次</span></div><i aria-hidden="true"></i><small>共 4 步 · 收下 1 次，再回看 3 次</small></div><div class="o-actions"><button class="o-primary" data-action="mark">替我收好</button><button class="o-secondary" data-action="motion">${state?.settings?.reducedMotion ? '继续散步' : '安静一下'}</button><button class="o-secondary" data-action="library">我的收藏</button><button class="o-secondary o-hide" data-action="hide">先躲一躲</button></div>`;
+      card.innerHTML = `<div class="o-head"><p class="o-eyebrow">一点悄悄说</p><p class="o-say">这页，好像还想再见你。</p><h2 class="o-title">${escapeHtml(document.title || domain)}</h2><p class="o-meta">${escapeHtml(domain)}</p></div>${contentLine}<div class="o-progress" style="--o-progress:0%"><div><strong>今天先收下</strong><span>往后再见 3 次</span></div><i aria-hidden="true"></i><small>共 4 步 · 收下 1 次，再回看 3 次</small></div><div class="o-actions"><button class="o-primary" data-action="mark">替我收好</button><button class="o-secondary" data-action="motion">${state?.settings?.reducedMotion ? '继续散步' : '安静一下'}</button><button class="o-secondary" data-action="library">我的收藏</button><button class="o-secondary o-hide" data-action="hide">先躲一躲</button></div>`;
     } else {
       const nextReview = reviewTime.format(new Date(record.nextReviewAt));
       const label = stage === 4 ? '一点长大了' : due ? '一点来找你了' : '一点记得';
-      const say = stage === 4 ? '见了四次，它已经住进记忆里。' : due ? '它回来啦。今天再见一面？' : `我记得它。${nextReview}，再带回来。`;
+      // 大字文案避开「回」——站酷小薇体把它画成实心方块，放最显眼的一行像渲染坏了。
+  const say = stage === 4 ? '见了四次，它已经住进记忆里。' : due ? '它来啦。今天再见一面？' : `我记得它。${nextReview}，再带回来。`;
       const encounterNote = encounterTotal ? `<p class="o-encounter"><i></i>途中偶遇 <strong>${encounterTotal}</strong> 次，原来的计划一直在继续</p>` : '';
       const primary = due
         ? '<button class="o-primary" data-action="used">用上了</button>'
@@ -116,7 +148,7 @@
               : '';
       const open = isCurrent ? '' : '<button class="o-open" data-action="open">打开原网页</button>';
       const decisions = due ? '<button class="o-secondary" data-action="later">稍后再看</button><button class="o-secondary" data-action="retire">不再需要</button>' : '';
-      card.innerHTML = `<div class="o-head"><p class="o-eyebrow">${label}</p><p class="o-say">${escapeHtml(say)}</p><h2 class="o-title">${escapeHtml(record.title)}</h2><p class="o-meta">${escapeHtml(record.sourceDomain)}</p></div>${encounterNote}${excerpt ? `<p class="o-excerpt">“${escapeHtml(excerpt)}”</p>` : ''}<div class="o-progress" style="--o-progress:${progress(stage)}%"><div><strong>${stage === 4 ? '一起走完了' : `相见 ${stage}/4`}</strong><span>${stage === 4 ? '宠物已经长成' : stepCopy(stage)}</span></div><i aria-hidden="true"></i><small>进度 ${stage}/4 · 宠物 ${progress(stage)}%</small></div><div class="o-actions${due ? ' o-review-actions' : ''}">${primary}${open}${decisions}<button class="o-secondary" data-action="motion">${state?.settings?.reducedMotion ? '继续散步' : '安静一下'}</button><button class="o-secondary" data-action="library">我的收藏</button>${due ? '' : '<button class="o-secondary o-hide" data-action="hide">先躲一躲</button>'}</div>`;
+      card.innerHTML = `<div class="o-head"><p class="o-eyebrow">${label}</p><p class="o-say">${escapeHtml(say)}</p><h2 class="o-title">${escapeHtml(record.title)}</h2><p class="o-meta">${escapeHtml(record.sourceDomain)}</p></div>${encounterNote}${contentLine}<div class="o-progress" style="--o-progress:${progress(stage)}%"><div><strong>${stage === 4 ? '一起走完了' : `相见 ${stage}/4`}</strong><span>${stage === 4 ? '宠物已经长成' : stepCopy(stage)}</span></div><i aria-hidden="true"></i><small>进度 ${stage}/4 · 宠物 ${progress(stage)}%</small></div><div class="o-actions${due ? ' o-review-actions' : ''}">${primary}${open}${decisions}<button class="o-secondary" data-action="motion">${state?.settings?.reducedMotion ? '继续散步' : '安静一下'}</button><button class="o-secondary" data-action="library">我的收藏</button>${due ? '' : '<button class="o-secondary o-hide" data-action="hide">先躲一躲</button>'}</div>`;
     }
     positionCard();
   }

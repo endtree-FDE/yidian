@@ -1,12 +1,12 @@
 // 同步共享文件：一份源头，三处副本。
 //
 // 为什么有副本：扩展被浏览器沙箱限制只能读自己目录；桌面端打包后不能依赖仓库里的兄弟目录。
-// 所以核心逻辑与界面文件都以 packages/yidian-core/ 与 packages/yidian-1.3.0/ 为源，
+// 所以核心逻辑与界面文件都以 core/ 与 extension/ 为源，
 // 同步出三份副本，并由 tests/core-sync.test.mjs 守住「一字不差」。
 //
-//   1) packages/yidian-1.3.0/            扩展包内的核心副本（扩展的 SW 与页面用）
-//   2) packages/yidian-desktop/vendor/   桌面端内置的核心副本（打包后独立）
-//   3) packages/yidian-desktop/assets/bundle/  桌面端内置的界面副本（收藏库页、宠物样式、字体图标）
+//   1) extension/                      扩展包内的核心副本（扩展的 SW 与页面用）
+//   2) packages/yidian-desktop/vendor/ 桌面端内置的核心副本（打包后独立）
+//   3) packages/yidian-desktop/assets/bundle/ 桌面端内置的界面副本（收藏库页、宠物样式、字体图标）
 //
 // 用法：
 //   node tools/sync-shared.mjs          # 写入
@@ -17,11 +17,11 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
-const coreDir = path.join(root, 'packages', 'yidian-core');
-const extensionDir = path.join(root, 'packages', 'yidian-1.3.0');
+const coreDir = path.join(root, 'core');
+const extensionDir = path.join(root, 'extension');
 const desktopDir = path.join(root, 'packages', 'yidian-desktop');
 
-// 核心文件（源在 packages/yidian-core/）
+// 核心文件（源在 core/）
 const CORE_FILES = ['domain.mjs', 'messages.mjs', 'bridge-protocol.mjs', 'page-meta.mjs'];
 
 // 界面文件（源在扩展包，桌面端打包后要自带一份）

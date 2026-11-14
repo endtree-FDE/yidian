@@ -13,12 +13,13 @@
 //   setBadge({ text, title })?   可选：工具栏角标（桌面端不需要）
 //   now():          可选：时间源（默认 Date.now）
 import {
-  addEncounter, advanceRecord, canAddEncounter, consolidateRecords, createRecord, dayKeyFor, inQuietHours, isDue, MAX_STAGE,
+  addEncounter, advanceRecord, canAddEncounter, consolidateRecords, createRecord, dayKeyFor, deferRecord, inQuietHours, isDue, MAX_STAGE,
   mergeByKey, mergeContent, normalizeImportedRecord, normalizeQuietHours, normalizeUrl, quietEndAt, restartRecord, selectNextDue, setNote, updateRecordUrl
 } from './domain.mjs';
 
 export const RECORDS_KEY = 'records';
 export const ARCHIVED_KEY = 'archivedRecords';
+export const UNREADABLE_KEY = 'unreadableRecords';
 export const SETTINGS_KEY = 'settings';
 export const DIGEST_DAY_KEY = 'lastDigestDay';
 export const REVIEW_ALARM = 'yidian-next-review';
@@ -66,37 +67,75 @@ export function createMessageLayer(platform) {
   /* ---------------------------------------------------------- 存储 */
 
   async function getRawRecords() {
-    return (await storage.get(RECORDS_KEY))[RECORDS_KEY] ?? [];
+    const stored = await storage.get(RECORDS_KEY);
+    return Object.hasOwn(stored, RECORDS_KEY) ? stored[RECORDS_KEY] : [];
   }
 
   async function getRecords() {
     return consolidateRecords(await getRawRecords()).records;
   }
 
-  async function saveRecords(records) {
-    try {
-      await storage.set({ [RECORDS_KEY]: records });
-    } catch (error) {
-      console.error('[一点] 保存收藏失败', error);
-      throw new Error('本地存储空间不足，请导出备份后清理部分记录');
-    }
-    onRecordsChanged();
+  async function getRawArchivedRecords() {
+    const stored = await storage.get(ARCHIVED_KEY);
+    return Object.hasOwn(stored, ARCHIVED_KEY) ? stored[ARCHIVED_KEY] : [];
   }
 
   async function getArchivedRecords() {
-    const archived = (await storage.get(ARCHIVED_KEY))[ARCHIVED_KEY];
-    const list = Array.isArray(archived) ? archived : [];
-    return consolidateRecords(list).records;
+    return consolidateRecords(await getRawArchivedRecords()).records;
+  }
+
+  // 坏记录隔离区：读不出来、合并时被丢掉的记录不直接扔掉，挪到这里。
+  // 用户导出备份时能看见它们，也能原样导回来。
+  async function getUnreadableRecords() {
+    const stored = (await storage.get(UNREADABLE_KEY))[UNREADABLE_KEY];
+    return Array.isArray(stored) ? stored : stored === undefined ? [] : [{ source: UNREADABLE_KEY, record: stored }];
+  }
+
+  // 所有写入都走这里：先算出「会被合并规则丢掉」的记录挪进隔离区，再一次性落盘。
+  // 只写一份更新时不碰另一份，也不碰隔离区。
+  async function saveCollections(updates) {
+    try {
+      const rejected = [];
+      for (const key of [RECORDS_KEY, ARCHIVED_KEY]) {
+        if (!Object.hasOwn(updates, key)) continue;
+        const raw = key === RECORDS_KEY ? await getRawRecords() : await getRawArchivedRecords();
+        rejected.push(...consolidateRecords(raw).rejected.map((record) => ({ source: key, record })));
+      }
+      if (rejected.length) {
+        updates[UNREADABLE_KEY] = [
+          ...(Object.hasOwn(updates, UNREADABLE_KEY) ? updates[UNREADABLE_KEY] : await getUnreadableRecords()),
+          ...rejected,
+        ];
+      }
+      await storage.set(updates);
+    } catch (error) {
+      console.error('[一点] 保存本地记录失败', error);
+      throw new Error('无法保存本地记录，请导出备份后重试', { cause: error });
+    }
+    if (Object.hasOwn(updates, RECORDS_KEY) || Object.hasOwn(updates, ARCHIVED_KEY)) onRecordsChanged();
+  }
+
+  async function saveRecords(records) {
+    return saveCollections({ [RECORDS_KEY]: records });
   }
 
   async function saveArchivedRecords(archived) {
-    try {
-      await storage.set({ [ARCHIVED_KEY]: archived });
-    } catch (error) {
-      console.error('[一点] 保存归档失败', error);
-      throw new Error('本地存储空间不足，请导出备份后清理部分记录');
+    return saveCollections({ [ARCHIVED_KEY]: archived });
+  }
+
+  // 安装 / 启动时迁移：把旧版本存下的、现在读不出来的记录挪进隔离区，而不是悄悄丢掉。
+  async function migrateCollections() {
+    const rawRecords = await getRawRecords();
+    const rawArchived = await getRawArchivedRecords();
+    const result = consolidateRecords(rawRecords);
+    const archivedResult = consolidateRecords(rawArchived);
+    if (result.changed || archivedResult.changed) {
+      await saveCollections({
+        ...(result.changed ? { [RECORDS_KEY]: result.records } : {}),
+        ...(archivedResult.changed ? { [ARCHIVED_KEY]: archivedResult.records } : {}),
+      });
     }
-    onRecordsChanged();
+    return result;
   }
 
   async function getSettings() {
@@ -179,6 +218,12 @@ export function createMessageLayer(platform) {
     }).catch((error) => console.warn('yidian notification failed', error));
   }
 
+  async function clearDueNotification() {
+    lastNotifiedRecord = null;
+    lastNotifiedMany = false;
+    await clearNotification(DUE_NOTIFICATION_ID);
+  }
+
   async function openNotifiedRecord() {
     const record = lastNotifiedRecord;
     const many = lastNotifiedMany;
@@ -231,16 +276,36 @@ export function createMessageLayer(platform) {
     });
   }
 
-  async function completeReview(normalizedUrl) {
+  // 一次回看有四种结果：
+  //   review —— 看完，进入下一程
+  //   used   —— 用上了，这条就此收尾
+  //   later  —— 稍后再看（推到明天），回看进度不变
+  //   retire —— 不再需要，直接收进归档
+  async function decideReview(normalizedUrl, choice = 'review') {
+    if (!['review', 'used', 'later', 'retire'].includes(choice)) return { ok: false, error: '无效的回看选择' };
     return enqueueRecordsMutation(async () => {
       const records = await getRecords();
       const index = records.findIndex((record) => record.normalizedUrl === normalizedUrl);
       if (index < 0) return { ok: false, error: '记录不存在' };
-      const result = advanceRecord(records[index], now());
+      if (choice === 'retire') {
+        if (!isDue(records[index], now())) return { ok: true, changed: false, reason: 'not_due', record: records[index] };
+        const retired = addEncounter(records[index], { type: 'retired', now: now() });
+        const archived = await getArchivedRecords();
+        const kept = archived.filter((record) => record.normalizedUrl !== normalizedUrl);
+        const remaining = records.filter((_, i) => i !== index);
+        await saveCollections({ [RECORDS_KEY]: remaining, [ARCHIVED_KEY]: [...kept, retired] });
+        await syncDerivedState(remaining);
+        await clearDueNotification();
+        return { ok: true, changed: true, archived: true, record: retired };
+      }
+      const result = choice === 'later'
+        ? deferRecord(records[index], now())
+        : advanceRecord(records[index], now(), choice);
       if (!result.changed) return { ok: true, changed: false, reason: result.reason, record: result.record };
       const next = records.with(index, result.record);
       await saveRecords(next);
       await syncDerivedState(next);
+      await clearDueNotification();
       return { ok: true, changed: true, record: result.record };
     });
   }
@@ -256,8 +321,10 @@ export function createMessageLayer(platform) {
       if (!removedFromRecords && !removedFromArchived) {
         return { ok: false, error: '记录不存在，可能已被删除' };
       }
-      if (removedFromRecords) await saveRecords(nextRecords);
-      if (removedFromArchived) await saveArchivedRecords(nextArchived);
+      await saveCollections({
+        ...(removedFromRecords ? { [RECORDS_KEY]: nextRecords } : {}),
+        ...(removedFromArchived ? { [ARCHIVED_KEY]: nextArchived } : {}),
+      });
       await syncDerivedState(nextRecords);
       return { ok: true, removed: true, fromArchived: removedFromArchived };
     });
@@ -312,8 +379,7 @@ export function createMessageLayer(platform) {
         const existing = merged.get(record.normalizedUrl);
         if (!existing || record.updatedAt >= existing.updatedAt) merged.set(record.normalizedUrl, record);
       }
-      await saveRecords(remaining);
-      await saveArchivedRecords([...merged.values()]);
+      await saveCollections({ [RECORDS_KEY]: remaining, [ARCHIVED_KEY]: [...merged.values()] });
       await syncDerivedState(remaining);
       return { ok: true, archived: grown.length, remaining: remaining.length };
     });
@@ -329,26 +395,41 @@ export function createMessageLayer(platform) {
         return { ok: false, error: '收藏库里已有同一网页的记录' };
       }
       const next = consolidateRecords([...records, archived[index]]).records;
-      await saveRecords(next);
-      await saveArchivedRecords(archived.filter((_, i) => i !== index));
+      await saveCollections({ [RECORDS_KEY]: next, [ARCHIVED_KEY]: archived.filter((_, i) => i !== index) });
       await syncDerivedState(next);
       return { ok: true, record: archived[index] };
     });
   }
 
-  async function importRecords(rawRecords, rawArchived) {
+  async function importRecords(rawRecords, rawArchived, rawUnreadable) {
     if (!Array.isArray(rawRecords) || rawRecords.length > 5000) throw new TypeError('请选择有效的一点备份文件');
     const archivedList = rawArchived == null ? [] : rawArchived;
+    const unreadableList = rawUnreadable == null ? [] : rawUnreadable;
     if (!Array.isArray(archivedList) || archivedList.length > 5000) throw new TypeError('请选择有效的一点备份文件');
+    if (!Array.isArray(unreadableList) || unreadableList.length > 5000
+      || unreadableList.some((item) => !item || typeof item !== 'object' || typeof item.source !== 'string')) {
+      throw new TypeError('备份中的旧数据无效');
+    }
     const incoming = rawRecords.map((record) => normalizeImportedRecord(record, now()));
     const incomingArchived = archivedList.map((record) => normalizeImportedRecord(record, now()));
     return enqueueRecordsMutation(async () => {
       const records = consolidateRecords(mergeByKey(await getRecords(), incoming)).records;
       const archived = consolidateRecords(mergeByKey(await getArchivedRecords(), incomingArchived)).records;
-      await saveRecords(records);
-      await saveArchivedRecords(archived);
-      await syncDerivedState(records);
-      return { ok: true, imported: incoming.length + incomingArchived.length, total: records.length };
+      // 同一条记录同时出现在「在册」和「归档」时，留更新时间新的那一份。
+      const activeByKey = new Map(records.map((record) => [record.normalizedUrl, record]));
+      const archivedByKey = new Map(archived.map((record) => [record.normalizedUrl, record]));
+      for (const [key, active] of activeByKey) {
+        const inactive = archivedByKey.get(key);
+        if (!inactive) continue;
+        if (inactive.updatedAt >= active.updatedAt) activeByKey.delete(key);
+        else archivedByKey.delete(key);
+      }
+      const keptRecords = [...activeByKey.values()];
+      const keptArchived = [...archivedByKey.values()];
+      const unreadable = [...await getUnreadableRecords(), ...unreadableList];
+      await saveCollections({ [RECORDS_KEY]: keptRecords, [ARCHIVED_KEY]: keptArchived, [UNREADABLE_KEY]: unreadable });
+      await syncDerivedState(keptRecords);
+      return { ok: true, imported: incoming.length + incomingArchived.length, total: keptRecords.length };
     });
   }
 
@@ -407,7 +488,7 @@ export function createMessageLayer(platform) {
       const record = reviewMode ? (dueRecord ?? currentRecord) : currentRecord;
       return {
         ok: true, record, currentRecord, dueRecord,
-        isDue: Boolean(reviewMode && dueRecord),
+        isDue: Boolean(record && isDue(record, now())),
         canEncounter: Boolean(currentRecord && canAddEncounter(currentRecord, now())),
         settings,
       };
@@ -418,11 +499,33 @@ export function createMessageLayer(platform) {
         const bTime = b.stage === MAX_STAGE ? Infinity : b.nextReviewAt;
         return aTime - bTime || b.updatedAt - a.updatedAt;
       });
-      return { ok: true, records };
+      // 读不出来的记录也算「有一份收藏在」，不然用户以为丢了。
+      const unreadableCount = (await getUnreadableRecords()).length
+        + consolidateRecords(await getRawRecords()).rejected.length
+        + consolidateRecords(await getRawArchivedRecords()).rejected.length;
+      return { ok: true, records, unreadableCount };
     }
     if (message.type === 'list-archived') {
       const records = (await getArchivedRecords()).toSorted((a, b) => b.updatedAt - a.updatedAt);
       return { ok: true, records };
+    }
+    // 导出备份：在册的、归档的、读不出来的，一起带走。
+    if (message.type === 'export-backup') {
+      const [rawRecords, rawArchived, unreadable] = await Promise.all([
+        getRawRecords(), getRawArchivedRecords(), getUnreadableRecords(),
+      ]);
+      const activeResult = consolidateRecords(rawRecords);
+      const archivedResult = consolidateRecords(rawArchived);
+      return {
+        ok: true,
+        records: activeResult.records,
+        archived: archivedResult.records,
+        unreadable: [
+          ...unreadable,
+          ...activeResult.rejected.map((record) => ({ source: RECORDS_KEY, record })),
+          ...archivedResult.rejected.map((record) => ({ source: ARCHIVED_KEY, record })),
+        ],
+      };
     }
     if (message.type === 'open-library') {
       await openLibrary();
@@ -434,7 +537,8 @@ export function createMessageLayer(platform) {
       return { ok: true };
     }
     if (message.type === 'mark-current') return markCurrent(message.tab);
-    if (message.type === 'complete-review') return completeReview(message.normalizedUrl);
+    if (message.type === 'complete-review') return decideReview(message.normalizedUrl);
+    if (message.type === 'decide-review') return decideReview(message.normalizedUrl, message.choice);
     if (message.type === 'restart-journey') return restartJourney(message.normalizedUrl);
     if (message.type === 'remove-record') return removeRecord(message.normalizedUrl);
     if (message.type === 'change-url') return changeUrl(message.normalizedUrl, message.url);
@@ -445,7 +549,7 @@ export function createMessageLayer(platform) {
     if (message.type === 'get-settings') return { ok: true, settings: await getSettings() };
     if (message.type === 'set-notify-on-due') return setNotifyOnDue(message.value);
     if (message.type === 'set-quiet-hours') return setQuietHours(message.value);
-    if (message.type === 'import-records') return importRecords(message.records, message.archived);
+    if (message.type === 'import-records') return importRecords(message.records, message.archived, message.unreadable);
     return { ok: false, error: '未知操作' };
   }
 
@@ -456,10 +560,14 @@ export function createMessageLayer(platform) {
     refreshBadge,
     syncDerivedState,
     openNotifiedRecord,
+    clearDueNotification,
     getRecords,
     getArchivedRecords,
+    getUnreadableRecords,
     getSettings,
     saveRecords,
     saveArchivedRecords,
+    saveCollections,
+    migrateCollections,
   };
 }

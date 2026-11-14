@@ -1,6 +1,10 @@
 export const DAY_MS = 86_400_000;
 export const MAX_STAGE = 4;
 export const MAX_EXCERPT_LENGTH = 1_000;
+// 一句描述（页面自己的一句话简介）。比选段短，比标题长。
+export const MAX_SUMMARY_LENGTH = 300;
+// 一句批注：你自己写的那句。比选段短。
+export const MAX_NOTE_LENGTH = 500;
 export const MAX_ENCOUNTERS = 100;
 export const ENCOUNTER_COOLDOWN_MS = 10 * 60_000;
 export const STAGE_PERCENT = Object.freeze({ 1: 25, 2: 50, 3: 75, 4: 100 });
@@ -39,17 +43,60 @@ export function fallbackTitle(rawUrl, now = Date.now()) {
   return `${sourceDomain(rawUrl)} · ${stamp} 收藏`;
 }
 
+/**
+ * 这个标题是不是我们自己兜底生成的（「域名 · MM-DD HH:mm 收藏」）。
+ * 判定方式是把标题和「按这条记录的创建时间算出来的兜底标题」逐字比 ——
+ * 这样不用往记录里塞额外字段，也能在合并时认出「真标题优先」。
+ */
+export function isAutoTitle(record) {
+  if (!record || !record.title) return true;
+  try {
+    return record.title === fallbackTitle(record.url || '', record.createdAt || 0);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 后来的采集给已有记录补内容：
+ * 真标题顶掉兜底标题，描述和选段只补不覆盖（后到的非空值赢）。
+ * 内容没变就原样返回，不动 updatedAt —— 免得无谓地惊动同步。
+ */
+export function mergeContent(existing, incoming) {
+  if (!existing) return incoming;
+  if (!incoming) return existing;
+  const title = isAutoTitle(existing) && !isAutoTitle(incoming) ? incoming.title : existing.title;
+  const summary = String(incoming.summary || '').trim() || String(existing.summary || '').trim();
+  const excerpt = String(incoming.excerpt || '').trim() || String(existing.excerpt || '').trim();
+  const currentSummary = String(existing.summary || '').trim();
+  const currentExcerpt = String(existing.excerpt || '').trim();
+  const changed = title !== existing.title
+    || summary !== currentSummary
+    || excerpt !== currentExcerpt;
+  if (!changed) return existing;
+  return {
+    ...existing,
+    title,
+    summary,
+    excerpt,
+    updatedAt: Math.max(existing.updatedAt || 0, incoming.updatedAt || 0) || existing.updatedAt,
+  };
+}
+
 export function nextReviewAtFor(stage, completedAt) {
   const days = NEXT_INTERVAL_DAYS[stage];
   return days ? completedAt + days * DAY_MS : null;
 }
 
-export function createRecord({ title, url, canonicalUrl = '', excerpt = '', now = Date.now(), skinId = 'fluid-01' }) {
+export function createRecord({ title, url, canonicalUrl = '', excerpt = '', summary = '', note = '', now = Date.now(), skinId = 'fluid-01' }) {
   const normalizedUrl = normalizeUrl(canonicalUrl || url);
   const savedExcerpt = String(excerpt || '').trim().slice(0, MAX_EXCERPT_LENGTH);
+  const savedSummary = String(summary || '').trim().slice(0, MAX_SUMMARY_LENGTH);
   return {
     title: String(title || '').trim() || fallbackTitle(url, now),
     excerpt: savedExcerpt,
+    summary: savedSummary,
+    note: String(note || '').trim().slice(0, MAX_NOTE_LENGTH),
     url,
     canonicalUrl: canonicalUrl ? normalizeUrl(canonicalUrl) : '',
     normalizedUrl,
@@ -148,16 +195,28 @@ export function encountersFor(record) {
   return encounters;
 }
 
-export function addEncounter(record, { type = 'encounter', now = Date.now(), excerpt = '' } = {}) {
+export function addEncounter(record, { type = 'encounter', now = Date.now(), excerpt = '', summary = '' } = {}) {
   if (!ENCOUNTER_TYPES.has(type)) throw new TypeError('Unknown encounter type');
   const savedExcerpt = String(excerpt || '').trim().slice(0, MAX_EXCERPT_LENGTH);
+  const savedSummary = String(summary || '').trim().slice(0, MAX_SUMMARY_LENGTH);
   const encounter = { type, at: now, stage: record.stage, ...(savedExcerpt ? { excerpt: savedExcerpt } : {}) };
   return {
     ...record,
     ...(savedExcerpt ? { excerpt: savedExcerpt } : {}),
+    ...(savedSummary ? { summary: savedSummary } : {}),
     encounters: [...encountersFor(record), encounter].slice(-MAX_ENCOUNTERS),
     updatedAt: now,
   };
+}
+
+/**
+ * 写一句批注：你自己写的那句（「这条对我意味着什么」）。
+ * 空字符串 = 清除。
+ * 只改 note 与 updatedAt —— 写批注不算一次「相见」，足迹不动。
+ */
+export function setNote(record, note, now = Date.now()) {
+  const saved = String(note ?? '').trim().slice(0, MAX_NOTE_LENGTH);
+  return { ...record, note: saved, updatedAt: now };
 }
 
 export function canAddEncounter(record, now = Date.now()) {
@@ -209,6 +268,19 @@ export function consolidateRecords(records) {
     const master = group.toSorted((a, b) =>
       (b.stage || 1) - (a.stage || 1) || (b.updatedAt || 0) - (a.updatedAt || 0)
     )[0];
+    // 标题：真标题优先 —— 别让「域名 · 时间 收藏」这种兜底标题把好标题挤掉。
+    const titled = group.filter((record) => !isAutoTitle(record));
+    const titleSource = titled.length
+      ? titled.toSorted((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0]
+      : master;
+    // 描述：取最近一次抓到的非空描述。
+    const summarySource = group
+      .filter((record) => String(record.summary || '').trim())
+      .toSorted((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+    // 批注：你自己写的那句，取最近一次写的非空批注。
+    const noteSource = group
+      .filter((record) => String(record.note || '').trim())
+      .toSorted((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
     const events = group.flatMap((record) => encountersFor(record)).toSorted((a, b) => a.at - b.at);
     let keptSaved = false;
     const unique = new Map();
@@ -241,8 +313,11 @@ export function consolidateRecords(records) {
     }
     merged.push({
       ...master,
+      title: titleSource.title,
       url: master.url || masterUrl,
       excerpt: latestExcerpt,
+      summary: summarySource?.summary || String(master.summary || '').trim(),
+      note: noteSource?.note || String(master.note || '').trim(),
       normalizedUrl: masterNormalizedUrl,
       sourceDomain: masterSourceDomain,
       createdAt: Math.min(...group.map((record) => Number.isFinite(record.createdAt) ? record.createdAt : 0)),
@@ -276,6 +351,8 @@ export function normalizeImportedRecord(record, now = Date.now()) {
   const url = String(record.url || '');
   const title = String(record.title || '').trim();
   const excerpt = String(record.excerpt || '').trim();
+  const summary = String(record.summary || '').trim();
+  const note = String(record.note || '').trim();
   const skinId = String(record.skinId || 'fluid-01');
   const canonicalUrl = String(record.canonicalUrl || '');
   const encounters = Array.isArray(record.encounters) ? record.encounters : [];
@@ -286,7 +363,8 @@ export function normalizeImportedRecord(record, now = Date.now()) {
       throw new TypeError('Backup contains an invalid encounter');
     }
   }
-  if (url.length > 4096 || title.length > 500 || excerpt.length > MAX_EXCERPT_LENGTH || skinId.length > 64) {
+  if (url.length > 4096 || title.length > 500 || excerpt.length > MAX_EXCERPT_LENGTH
+    || summary.length > MAX_SUMMARY_LENGTH || note.length > MAX_NOTE_LENGTH || skinId.length > 64) {
     throw new TypeError('备份中的文本字段过长');
   }
   const normalizedUrl = normalizeUrl(canonicalUrl || url);
@@ -295,6 +373,8 @@ export function normalizeImportedRecord(record, now = Date.now()) {
   return {
     title: title || sourceDomain(url),
     excerpt,
+    summary,
+    note,
     url,
     canonicalUrl: canonicalUrl ? normalizeUrl(canonicalUrl) : '',
     normalizedUrl,
@@ -379,7 +459,7 @@ export function inQuietHours(quietHours, now = Date.now(), timeZone = 'Asia/Shan
 export function matchesRecordQuery(record, query) {
   const needle = String(query ?? '').trim().toLowerCase();
   if (!needle) return true;
-  const haystack = [record.title, record.sourceDomain, record.excerpt, record.url]
+  const haystack = [record.title, record.sourceDomain, record.excerpt, record.summary, record.note, record.url]
     .map((value) => String(value ?? '').toLowerCase());
   return haystack.some((value) => value.includes(needle));
 }
@@ -418,6 +498,10 @@ export function recordsToMarkdown({ records = [], archived = [], exportedAt = ne
       `- domain: ${record.sourceDomain}`,
       `- savedAt: ${day(record.createdAt)}`,
     ];
+    const summary = String(record.summary || '').trim();
+    if (summary) lines.push('', summary);
+    const note = String(record.note || '').trim();
+    if (note) lines.push('', `批注：${note}`);
     const excerpt = String(record.excerpt || '').trim();
     if (excerpt) lines.push('', `> ${excerpt}`);
     const events = Array.isArray(record.encounters) ? record.encounters : [];

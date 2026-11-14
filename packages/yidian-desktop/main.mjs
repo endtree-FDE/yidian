@@ -4,7 +4,7 @@
 //   扩展 = 采集器（它才知道当前网页的标题、URL、选段）
 //   桌面端 = 常驻宠物 + 到期提醒 + 回看闭环 + 自己的采集通道
 //
-// 业务逻辑在 packages/yidian-core/（平台无关），这里只做「壳」：
+// 业务逻辑在 core/（平台无关），这里只做「壳」：
 // 窗口、托盘、热键、剪贴板/拖拽采集、本地桥、调度器、开机自启。
 import path from 'node:path';
 import fs from 'node:fs/promises';

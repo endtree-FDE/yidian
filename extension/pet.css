@@ -31,6 +31,8 @@
 #otter-yidian-card .o-encounter i { width:8px!important; height:8px!important; flex:0 0 auto!important; border-radius:50%!important; background:var(--peach)!important; box-shadow:0 0 0 4px rgba(241,143,109,.14)!important; }
 #otter-yidian-card .o-encounter strong { font-size:13px!important; }
 #otter-yidian-card .o-excerpt { max-height:72px!important; margin:0 0 13px!important; overflow:hidden!important; color:#42524d!important; font-size:12px!important; line-height:1.5!important; }
+#otter-yidian-card .o-summary { max-height:72px!important; margin:0 0 13px!important; padding-left:9px!important; overflow:hidden!important; border-left:2px solid rgba(105,181,157,.45)!important; color:#5e6d68!important; font-size:12px!important; line-height:1.5!important; }
+#otter-yidian-card .o-note { max-height:72px!important; margin:0 0 13px!important; padding-left:9px!important; overflow:hidden!important; border-left:2px solid rgba(241,143,109,.6)!important; color:#42524d!important; font-size:12.5px!important; line-height:1.5!important; }
 #otter-yidian-card .o-progress { display:grid!important; grid-template-columns:1fr auto!important; gap:7px 12px!important; margin:7px 2px 14px!important; }
 #otter-yidian-card .o-progress div { display:flex!important; align-items:baseline!important; gap:7px!important; min-width:0!important; }
 #otter-yidian-card .o-progress strong { font-size:12px!important; white-space:nowrap!important; } #otter-yidian-card .o-progress span { color:#667670!important; font-size:11px!important; line-height:1.35!important; }
