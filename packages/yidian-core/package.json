@@ -1,0 +1,13 @@
+{
+  "name": "yidian-core",
+  "private": true,
+  "version": "0.1.0",
+  "description": "一点 · 平台无关的核心：回访调度、记录语义、到期提醒",
+  "type": "module",
+  "main": "messages.mjs",
+  "exports": {
+    ".": "./messages.mjs",
+    "./domain": "./domain.mjs",
+    "./page-meta": "./page-meta.mjs"
+  }
+}

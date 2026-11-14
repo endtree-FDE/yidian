@@ -46,6 +46,17 @@
       </div>
     </header>
 
+    <section id="desktop-panel" class="desktop-panel" hidden>
+      <div class="desktop-panel-text">
+        <strong id="desktop-status">桌面端未连接</strong>
+        <span id="desktop-hint">在桌面端托盘里点「连接浏览器扩展」，把它显示的 6 位码填进来。</span>
+      </div>
+      <form id="desktop-form" class="desktop-form" hidden>
+        <input id="desktop-code" type="text" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="6 位配对码" aria-label="桌面端配对码">
+        <button id="desktop-connect" type="submit">连接</button>
+      </form>
+    </section>
+
     <details class="howto">
       <summary>一点怎么用？</summary>
       <p class="intro">这里保存你收下的网页和选段。每条内容共 4 步：收下 1 次，再回看 3 次。你可以查看下次回看的具体时间；到期时，点击浏览器工具栏里的“一点”完成回看。</p>
@@ -100,7 +111,17 @@
         <p class="record-state"></p>
         <h2></h2>
         <p class="record-meta"></p>
+        <p class="record-summary" hidden></p>
         <p class="record-excerpt" hidden></p>
+        <div class="note-row">
+          <p class="record-note" hidden></p>
+          <button class="note-edit" type="button">写一句</button>
+          <form class="note-form" hidden>
+            <input class="note-input" type="text" maxlength="500" placeholder="写一句：这条对我意味着什么">
+            <button class="note-save" type="submit">记下</button>
+            <button class="note-cancel" type="button">取消</button>
+          </form>
+        </div>
         <p class="encounter-summary" hidden></p>
         <details class="footprints">
           <summary>相见足迹</summary>

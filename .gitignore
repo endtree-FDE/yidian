@@ -43,6 +43,7 @@ yidian-xhs-competition/
 
 # 一次性文档构建脚本与旧比对脚本
 tools/*.py
+!tools/build-font-subset.py
 tools/check-source-match.ps1
 tools/diff-wt-pkg.ps1
 
@@ -50,6 +51,14 @@ tools/diff-wt-pkg.ps1
 .qoder/
 .preview-assets/
 node_modules/
+
+# 桌面端构建产物（安装包约 116MB，不进仓库）
+packages/yidian-desktop/dist/
+packages/yidian-desktop/dist-build/
+
+# 桌面端的同步副本要进仓库（core-sync 测试在新机器上要跑得过），
+# 但上面的 assets/ 规则会连它一起排除，这里显式放行
+!packages/yidian-desktop/assets/
 
 # 临时文件
 tmp-*

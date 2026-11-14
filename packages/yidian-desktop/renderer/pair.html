@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>连接浏览器扩展</title>
+  <link rel="stylesheet" href="app://bundle/pet.css">
+  <link rel="stylesheet" href="app://app/renderer/desktop-pair.css">
+</head>
+<body>
+  <main class="pair-card" aria-live="polite">
+    <header>
+      <h1>连接浏览器扩展</h1>
+      <p>浏览器里的「一点」和桌面端要用同一个收藏库。把这串码填进扩展的「我的收藏」页，就接上了。</p>
+    </header>
+    <div class="pair-code" id="code" aria-label="配对码">------</div>
+    <div class="pair-actions">
+      <button type="button" id="copy" class="primary">复制配对码</button>
+      <span class="pair-chip" id="status">已复制到剪贴板</span>
+    </div>
+    <footer>
+      <span id="countdown">5 分钟内有效</span>
+      <span class="pair-hint">配对码只能用一次，5 分钟后自动失效。</span>
+    </footer>
+  </main>
+  <script src="app://app/renderer/pair.js"></script>
+</body>
+</html>

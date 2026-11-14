@@ -1,0 +1,57 @@
+{
+  "name": "yidian-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "一点 · 桌面常驻层：托盘 + 置顶宠物 + 系统提醒，浏览器关着也能被叫回来",
+  "main": "main.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "capture": "electron . --capture",
+    "dist": "electron-builder --win --x64",
+    "dist:dir": "electron-builder --dir",
+    "dist:mac": "electron-builder --mac",
+    "verify:pack": "node tools/verify-pack.mjs"
+  },
+  "devDependencies": {
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.yidian.desktop",
+    "productName": "一点",
+    "copyright": "Copyright © 2026 一点",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.mjs",
+      "preload.mjs",
+      "core/**/*",
+      "renderer/**/*",
+      "vendor/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "一点"
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png"
+    }
+  }
+}

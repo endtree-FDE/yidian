@@ -2,8 +2,13 @@
   "name": "yidian-workspace",
   "private": true,
   "scripts": {
-    "test": "node --test tests/domain.test.mjs",
-    "test:e2e": "node --test tests/e2e/extension.test.mjs"
+    "test": "node --test tests/domain.test.mjs tests/page-meta.test.mjs tests/core-sync.test.mjs tests/desktop-core.test.mjs tests/desktop-capture.test.mjs tests/desktop-bridge.test.mjs tests/font-guard.test.mjs",
+    "test:e2e": "node --test tests/e2e/extension.test.mjs",
+    "test:e2e:desktop": "node --test tests/e2e/desktop-pairing.test.mjs && node --test tests/e2e/desktop-capture.test.mjs",
+    "test:e2e:desktop:capture": "node --test tests/e2e/desktop-capture.test.mjs",
+    "test:e2e:desktop:packaged": "node --test tests/e2e/desktop-packaged.test.mjs",
+    "desktop": "npm --prefix packages/yidian-desktop start",
+    "desktop:capture": "npm --prefix packages/yidian-desktop run capture"
   },
   "devDependencies": {
     "playwright": "^1.54.0"

@@ -14,9 +14,16 @@ import {
   quietEndAt,
   consolidateRecords,
   mergeByKey,
+  mergeContent,
+  isAutoTitle,
   normalizeImportedRecord,
   createRecord,
-} from '../packages/yidian-1.3.0/domain.mjs';
+  addEncounter,
+  setNote,
+  MAX_NOTE_LENGTH,
+  matchesRecordQuery,
+  recordsToMarkdown,
+} from '../packages/yidian-core/domain.mjs';
 
 const NOW = Date.parse('2026-08-19T04:00:00Z'); // 北京墙钟 12:00
 
@@ -144,4 +151,107 @@ test('consolidateRecords：已规范的唯一记录集不产生变更', () => {
   assert.equal(second.changed, false);
   assert.equal(second.mergedCount, 0);
   assert.equal(second.records.length, 1);
+});
+
+// ---- 内容层：标题 / 一句描述 / 选段 ----
+
+test('createRecord：描述与选段分开放，标题空了走兜底', () => {
+  const withTitle = createRecord({ title: '真标题', url: 'https://example.com/a', summary: '一句描述', now: NOW });
+  assert.equal(withTitle.title, '真标题');
+  assert.equal(withTitle.summary, '一句描述');
+  assert.equal(withTitle.excerpt, '');
+
+  const fallback = createRecord({ title: '', url: 'https://example.com/b', now: NOW });
+  assert.match(fallback.title, /^example\.com · /);
+  assert.equal(isAutoTitle(fallback), true);
+  assert.equal(isAutoTitle(withTitle), false);
+});
+
+test('mergeContent：真标题顶掉兜底标题，描述和选段只补不覆盖', () => {
+  const auto = createRecord({ title: '', url: 'https://example.com/a', now: NOW });
+  const real = createRecord({ title: '真标题', url: 'https://example.com/a', summary: '一句描述', now: NOW + 1000 });
+  const merged = mergeContent(auto, real);
+  assert.equal(merged.title, '真标题');
+  assert.equal(merged.summary, '一句描述');
+
+  // 已有描述时，后来的空值不覆盖
+  const keep = mergeContent(merged, createRecord({ title: '', url: 'https://example.com/a', now: NOW + 2000 }));
+  assert.equal(keep.summary, '一句描述');
+  assert.equal(keep.title, '真标题');
+
+  // 内容没变就原样返回，不动 updatedAt
+  const same = mergeContent(merged, real);
+  assert.equal(same, merged);
+});
+
+test('addEncounter：空描述不覆盖已有描述', () => {
+  const record = createRecord({ title: '甲', url: 'https://example.com/a', summary: '一句描述', now: NOW });
+  const next = addEncounter(record, { type: 'review', now: NOW + 1000 });
+  assert.equal(next.summary, '一句描述');
+  const withSummary = addEncounter(record, { type: 'review', now: NOW + 1000, summary: '新的描述' });
+  assert.equal(withSummary.summary, '新的描述');
+});
+
+test('consolidateRecords：合并时真标题不被兜底标题挤掉，描述取最近的非空', () => {
+  const auto = createRecord({ title: '', url: 'https://example.com/post', now: NOW - DAY_MS });
+  const real = createRecord({ title: '真标题', url: 'https://example.com/post', summary: '一句描述', now: NOW });
+  const { records } = consolidateRecords([auto, real]);
+  assert.equal(records.length, 1);
+  assert.equal(records[0].title, '真标题');
+  assert.equal(records[0].summary, '一句描述');
+});
+
+test('matchesRecordQuery：描述也能搜到', () => {
+  const record = createRecord({ title: '标题', url: 'https://example.com/a', summary: '独特的一句描述', now: NOW });
+  assert.equal(matchesRecordQuery(record, '独特'), true);
+  assert.equal(matchesRecordQuery(record, '找不到'), false);
+});
+
+test('recordsToMarkdown：描述与选段都写进备份', () => {
+  const record = createRecord({ title: '标题', url: 'https://example.com/a', summary: '一句描述', excerpt: '一段选中的话', now: NOW });
+  const markdown = recordsToMarkdown({ records: [record] });
+  assert.match(markdown, /一句描述/);
+  assert.match(markdown, /> 一段选中的话/);
+});
+
+test('normalizeImportedRecord：描述跟着导入，超长拒绝', () => {
+  const normalized = normalizeImportedRecord({ url: 'https://example.com/post', stage: 1, summary: '一句描述' }, NOW);
+  assert.equal(normalized.summary, '一句描述');
+  assert.throws(() => normalizeImportedRecord({ url: 'https://example.com/', stage: 1, summary: 'x'.repeat(400) }, NOW), /过长/);
+});
+
+// ---- 内容层第三件：一句话批注（你自己写的那句）----
+
+test('setNote：写一句、清除、超长截断，且不算一次「相见」', () => {
+  const record = createRecord({ title: '甲', url: 'https://example.com/a', now: NOW });
+  const noted = setNote(record, '  这条是我要的配色  ', NOW + 1000);
+  assert.equal(noted.note, '这条是我要的配色');
+  assert.equal(noted.updatedAt, NOW + 1000);
+  assert.equal(noted.encounters.length, record.encounters.length, '写批注不算一次相见');
+  assert.equal(setNote(record, '').note, '', '空字符串就是清除');
+  assert.equal(setNote(record, 'x'.repeat(900)).note.length, MAX_NOTE_LENGTH);
+});
+
+test('合并时批注不被后来的采集覆盖', () => {
+  const base = createRecord({ title: '甲', url: 'https://example.com/post', now: NOW });
+  const noted = setNote(base, '我的一句', NOW + 1000);
+  const later = createRecord({ title: '甲', url: 'https://example.com/post', now: NOW + 2000 });
+  const { records } = consolidateRecords([noted, later]);
+  assert.equal(records.length, 1);
+  assert.equal(records[0].note, '我的一句');
+});
+
+test('matchesRecordQuery / recordsToMarkdown 都带上批注', () => {
+  const record = setNote(
+    createRecord({ title: '标题', url: 'https://example.com/a', now: NOW }),
+    '独特的批注词',
+  );
+  assert.equal(matchesRecordQuery(record, '独特'), true);
+  assert.match(recordsToMarkdown({ records: [record] }), /批注：独特的批注词/);
+});
+
+test('normalizeImportedRecord：批注跟着导入，超长拒绝', () => {
+  const normalized = normalizeImportedRecord({ url: 'https://example.com/post', stage: 1, note: '我的一句' }, NOW);
+  assert.equal(normalized.note, '我的一句');
+  assert.throws(() => normalizeImportedRecord({ url: 'https://example.com/', stage: 1, note: 'x'.repeat(900) }, NOW), /过长/);
 });

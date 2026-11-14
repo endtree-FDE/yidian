@@ -17,6 +17,7 @@ let activeFilter = 'all';
 let activeQuery = '';
 let currentRecords = [];
 let currentArchived = [];
+let searchTimer = null;
 
 function encountersFor(record) {
   return Array.isArray(record.encounters) ? record.encounters : [];
@@ -108,6 +109,32 @@ function render(records) {
     node.querySelector('.record-meta').textContent = `${record.sourceDomain} · ${nextLabel(record)}`;
     const excerpt = node.querySelector('.record-excerpt');
     if (record.excerpt) { excerpt.textContent = `“${record.excerpt}”`; excerpt.hidden = false; }
+    const summary = node.querySelector('.record-summary');
+    if (!record.excerpt && record.summary) { summary.textContent = record.summary; summary.hidden = false; }
+    // 一句批注：你自己写的那句。写在收藏库里，随时能改。
+    const noteText = node.querySelector('.record-note');
+    if (record.note) { noteText.textContent = `“${record.note}”`; noteText.hidden = false; }
+    const noteEdit = node.querySelector('.note-edit');
+    const noteForm = node.querySelector('.note-form');
+    const noteInput = node.querySelector('.note-input');
+    noteEdit.textContent = record.note ? '改一句' : '写一句';
+    noteEdit.addEventListener('click', () => {
+      noteInput.value = record.note || '';
+      noteForm.hidden = false;
+      noteEdit.hidden = true;
+      noteInput.focus();
+    });
+    node.querySelector('.note-cancel').addEventListener('click', () => {
+      noteForm.hidden = true;
+      noteEdit.hidden = false;
+    });
+    noteForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      try {
+        await send({ type: 'set-note', normalizedUrl: record.normalizedUrl, note: noteInput.value });
+        await load('记下了');
+      } catch (error) { showError(error); }
+    });
     const encounterTotal = encounterCount(record);
     const encounterSummary = node.querySelector('.encounter-summary');
     if (encounterTotal) {
@@ -163,7 +190,8 @@ async function load(message = '') {
 
 searchInput.addEventListener('input', () => {
   activeQuery = searchInput.value;
-  render(currentRecords);
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => render(currentRecords), 150);
 });
 
 archiveButton.addEventListener('click', async () => {
@@ -287,5 +315,60 @@ quietToggle.addEventListener('change', saveQuietHours);
 quietStart.addEventListener('change', saveQuietHours);
 quietEnd.addEventListener('change', saveQuietHours);
 initSettings();
+
+/* ---------------------------------------------- 连接桌面端（只在扩展里出现） */
+
+// 桌面端不在的时候，这个面板不出现——扩展自己该怎么用还怎么用。
+const desktopPanel = document.querySelector('#desktop-panel');
+const desktopForm = document.querySelector('#desktop-form');
+const desktopCode = document.querySelector('#desktop-code');
+const desktopStatus = document.querySelector('#desktop-status');
+const desktopHint = document.querySelector('#desktop-hint');
+
+async function refreshDesktopStatus() {
+  if (!desktopPanel) return;
+  // 面板先出现，状态后到：桌面端没开时也不该让人等
+  desktopPanel.hidden = false;
+  try {
+    const result = await chrome.runtime.sendMessage({ type: 'desktop-status' });
+    const paired = Boolean(result?.paired);
+    const online = Boolean(result?.online);
+    if (paired) {
+      desktopStatus.textContent = '桌面端已连接';
+      desktopHint.textContent = '收藏会在两边同步：桌面端在跑时，它是权威。';
+      desktopForm.hidden = true;
+      return;
+    }
+    desktopStatus.textContent = online ? '桌面端在运行，还没连上' : '桌面端未连接';
+    desktopHint.textContent = online
+      ? '在桌面端托盘里点「连接浏览器扩展」，把它显示的 6 位码填进来。'
+      : '装好桌面端并打开它，再回来填配对码。';
+    desktopForm.hidden = false;
+  } catch {
+    desktopPanel.hidden = true;
+  }
+}
+
+if (location.protocol === 'chrome-extension:' && desktopPanel) {
+  desktopForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const code = desktopCode.value.trim();
+    desktopStatus.textContent = '正在连接…';
+    try {
+      const result = await chrome.runtime.sendMessage({ type: 'pair-desktop', code });
+      if (!result?.ok) {
+        desktopStatus.textContent = result?.error || '配对没成功，再试一次';
+        return;
+      }
+      desktopCode.value = '';
+      desktopStatus.textContent = '连上了';
+      desktopHint.textContent = '收藏已经在往桌面端搬了。';
+      desktopForm.hidden = true;
+    } catch (error) {
+      desktopStatus.textContent = error?.message || '配对没成功，再试一次';
+    }
+  });
+  refreshDesktopStatus();
+}
 
 load().catch(showError);

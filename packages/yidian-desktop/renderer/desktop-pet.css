@@ -1,0 +1,33 @@
+/* 桌面端宠物窗的覆盖样式。
+   底稿是扩展的 pet.css（同一个 #otter-yidian-* 结构与类名），
+   这里只改「网页端假设根节点铺满视口」的定位方式，不改长相。 */
+html, body {
+  background: transparent !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+#otter-yidian-root {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+#otter-yidian-pet {
+  left: 12px !important;
+  top: 8px !important;
+}
+/* 到期时轻轻晃一下 */
+#otter-yidian-pet.o-due #otter-yidian-body {
+  animation: otterYidianCall 2.6s ease-in-out infinite !important;
+}
+/* 拖链接过来时亮一圈 */
+#otter-yidian-pet.o-drop #otter-yidian-body {
+  box-shadow: 0 0 0 4px rgba(241, 143, 109, .35) !important;
+}
+@keyframes otterYidianCall {
+  0%, 88%, 100% { transform: translateY(0) rotate(0deg); }
+  92% { transform: translateY(-5px) rotate(-2deg); }
+  96% { transform: translateY(-2px) rotate(2deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #otter-yidian-pet.o-due #otter-yidian-body { animation: none !important; }
+}

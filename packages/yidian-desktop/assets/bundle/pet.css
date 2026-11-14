@@ -1,0 +1,58 @@
+@font-face { font-family:ZCOOLXiaoWei; src:url("fonts/ZCOOLXiaoWei-Regular.ttf") format("truetype"); font-display:swap; }
+#otter-yidian-root,
+#otter-yidian-root * { margin:0!important; padding:0!important; opacity:1!important; box-sizing:border-box!important; font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif!important; }
+#otter-yidian-root { --ink:#24342f; --mint:#69b59d; --mint-light:#a8dfcc; --paper:#fffdf7; --peach:#f18f6d; position:fixed!important; inset:0!important; width:100vw!important; height:100vh!important; z-index:2147483647!important; pointer-events:none!important; color:var(--ink)!important; }
+#otter-yidian-pet { --size:108px; --fill:0%; position:absolute!important; left:0!important; top:0!important; width:var(--size)!important; height:calc(var(--size) + 18px)!important; pointer-events:auto!important; cursor:grab!important; touch-action:none!important; user-select:none!important; filter:drop-shadow(0 12px 12px rgba(36,52,47,.18))!important; will-change:transform!important; }
+#otter-yidian-pet.dragging { cursor:grabbing!important; }
+#otter-yidian-body { position:relative!important; width:var(--size)!important; height:var(--size)!important; overflow:hidden!important; border:3px solid var(--ink)!important; border-radius:46% 54% 52% 48% / 55% 49% 51% 45%!important; background:#f2eee5!important; animation:otterYidianBob .72s ease-in-out infinite alternate!important; }
+#otter-yidian-liquid { position:absolute!important; left:0!important; right:0!important; bottom:0!important; height:var(--fill)!important; background:linear-gradient(150deg,#91d3bd,var(--mint))!important; transition:height .6s cubic-bezier(.2,.9,.25,1)!important; }
+#otter-yidian-liquid::before { content:""!important; position:absolute!important; left:-15%!important; top:-8px!important; width:130%!important; height:17px!important; border-radius:50%!important; background:var(--mint-light)!important; animation:otterYidianWave 3s ease-in-out infinite alternate!important; }
+#otter-yidian-face { position:absolute!important; inset:0!important; z-index:2!important; }
+#otter-yidian-face::before,#otter-yidian-face::after { content:""!important; position:absolute!important; top:43px!important; width:8px!important; height:10px!important; border-radius:50%!important; background:var(--ink)!important; }
+#otter-yidian-face::before { left:32px!important; } #otter-yidian-face::after { right:32px!important; }
+#otter-yidian-mouth { position:absolute!important; left:50%!important; top:60px!important; width:19px!important; height:9px!important; border:2px solid var(--ink)!important; border-top:0!important; border-radius:0 0 14px 14px!important; transform:translateX(-50%)!important; }
+#otter-yidian-feet { display:flex!important; justify-content:center!important; gap:17px!important; margin-top:-3px!important; }
+#otter-yidian-feet i { width:23px!important; height:8px!important; border-radius:50%!important; background:var(--ink)!important; animation:otterYidianStep .36s ease-in-out infinite alternate!important; }
+#otter-yidian-feet i:last-child { animation-direction:alternate-reverse!important; }
+#otter-yidian-pet[data-stage="3"] #otter-yidian-body { box-shadow:0 0 26px rgba(105,181,157,.55)!important; }
+#otter-yidian-pet[data-stage="4"] #otter-yidian-body { box-shadow:0 0 30px rgba(241,143,109,.58)!important; animation:otterYidianCelebrate .7s ease-out 1,otterYidianBob .52s .7s ease-in-out infinite alternate!important; }
+#otter-yidian-pet[data-stage="4"] #otter-yidian-liquid { background:linear-gradient(145deg,#f4b086,#69b59d)!important; }
+#otter-yidian-card { position:absolute!important; width:min(310px,calc(100vw - 24px))!important; padding:17px!important; overflow:visible!important; border:1px solid rgba(36,52,47,.16)!important; border-radius:26px 26px 22px 26px!important; background:radial-gradient(circle at 88% 8%,rgba(168,223,204,.26),transparent 30%),radial-gradient(circle at 8% 92%,rgba(241,143,109,.1),transparent 26%),rgba(255,253,247,.98)!important; box-shadow:0 20px 58px rgba(36,52,47,.22)!important; pointer-events:auto!important; color:var(--ink)!important; backdrop-filter:blur(12px)!important; }
+#otter-yidian-card[hidden] { display:none!important; }
+#otter-yidian-card::after { content:""!important; position:absolute!important; left:50%!important; width:18px!important; height:12px!important; background:rgba(255,253,247,.98)!important; transform:translateX(-50%)!important; }
+#otter-yidian-card[data-placement="above"]::after { bottom:-11px!important; clip-path:polygon(0 0,100% 0,50% 100%)!important; }
+#otter-yidian-card[data-placement="below"]::after { top:-11px!important; clip-path:polygon(50% 0,100% 100%,0 100%)!important; }
+#otter-yidian-card .o-head { margin:0 0 11px!important; }
+#otter-yidian-card .o-eyebrow { margin:0 0 5px!important; color:#2e7e69!important; font-size:11px!important; font-weight:800!important; letter-spacing:.08em!important; }
+#otter-yidian-card .o-say { margin:0 0 14px!important; max-width:250px!important; color:var(--ink)!important; font-family:ZCOOLXiaoWei,"Songti SC",serif!important; font-size:24px!important; font-weight:400!important; line-height:1.25!important; letter-spacing:.04em!important; }
+#otter-yidian-card .o-title { margin:0!important; font-size:14px!important; line-height:1.35!important; font-weight:800!important; overflow-wrap:anywhere!important; }
+#otter-yidian-card .o-meta { margin:3px 0 0!important; color:#667670!important; font-size:11px!important; line-height:1.45!important; }
+#otter-yidian-card .o-encounter { display:flex!important; align-items:center!important; gap:6px!important; margin:0 0 12px!important; padding:8px 10px!important; border-radius:11px!important; background:#fff0ea!important; color:#74483b!important; font-size:11px!important; line-height:1.35!important; }
+#otter-yidian-card .o-encounter i { width:8px!important; height:8px!important; flex:0 0 auto!important; border-radius:50%!important; background:var(--peach)!important; box-shadow:0 0 0 4px rgba(241,143,109,.14)!important; }
+#otter-yidian-card .o-encounter strong { font-size:13px!important; }
+#otter-yidian-card .o-excerpt { max-height:72px!important; margin:0 0 13px!important; overflow:hidden!important; color:#42524d!important; font-size:12px!important; line-height:1.5!important; }
+#otter-yidian-card .o-summary { max-height:72px!important; margin:0 0 13px!important; padding-left:9px!important; overflow:hidden!important; border-left:2px solid rgba(105,181,157,.45)!important; color:#5e6d68!important; font-size:12px!important; line-height:1.5!important; }
+#otter-yidian-card .o-note { max-height:72px!important; margin:0 0 13px!important; padding-left:9px!important; overflow:hidden!important; border-left:2px solid rgba(241,143,109,.6)!important; color:#42524d!important; font-size:12.5px!important; line-height:1.5!important; }
+#otter-yidian-card .o-progress { display:grid!important; grid-template-columns:1fr auto!important; gap:7px 12px!important; margin:7px 2px 14px!important; }
+#otter-yidian-card .o-progress div { display:flex!important; align-items:baseline!important; gap:7px!important; min-width:0!important; }
+#otter-yidian-card .o-progress strong { font-size:12px!important; white-space:nowrap!important; } #otter-yidian-card .o-progress span { color:#667670!important; font-size:11px!important; line-height:1.35!important; }
+#otter-yidian-card .o-progress i { grid-column:1 / -1!important; position:relative!important; height:5px!important; overflow:hidden!important; border-radius:99px!important; background:rgba(105,181,157,.18)!important; }
+#otter-yidian-card .o-progress i::before { content:""!important; position:absolute!important; inset:0 auto 0 0!important; width:var(--o-progress)!important; border-radius:inherit!important; background:linear-gradient(90deg,var(--mint-light),var(--mint))!important; transition:width .4s ease!important; }
+#otter-yidian-card .o-progress small { grid-column:1 / -1!important; color:#7a8984!important; font-size:10px!important; }
+#otter-yidian-card .o-actions { display:grid!important; grid-template-columns:repeat(3,1fr)!important; column-gap:4px!important; row-gap:5px!important; }
+#otter-yidian-card button { min-height:38px!important; padding:9px 12px!important; border:0!important; border-radius:12px!important; background:#e8f1ed!important; color:var(--ink)!important; font-size:13px!important; font-weight:750!important; cursor:pointer!important; }
+#otter-yidian-card button.o-primary,#otter-yidian-card button.o-open { grid-column:1 / -1!important; min-height:47px!important; background:var(--ink)!important; color:white!important; font-size:14px!important; font-weight:800!important; letter-spacing:0!important; }
+#otter-yidian-card button.o-primary::before { content:""!important; display:inline-block!important; width:7px!important; height:7px!important; margin-right:9px!important; border-radius:50%!important; background:var(--peach)!important; vertical-align:2px!important; }
+#otter-yidian-card button:disabled { cursor:default!important; background:#dfe8e4!important; color:#697872!important; }
+#otter-yidian-card button.o-secondary { min-height:31px!important; padding:6px 4px!important; border-radius:0!important; background:transparent!important; color:#5e6d68!important; font-size:11px!important; }
+#otter-yidian-card button.o-secondary + button.o-secondary { border-left:1px solid rgba(36,52,47,.11)!important; }
+#otter-yidian-card button.o-hide { color:#73817c!important; }
+#otter-yidian-card button:focus-visible { outline:3px solid rgba(46,126,105,.32)!important; outline-offset:2px!important; }
+#otter-yidian-toast { position:absolute!important; max-width:260px!important; padding:9px 12px!important; border-radius:12px!important; background:var(--ink)!important; color:white!important; font-size:12px!important; line-height:1.35!important; pointer-events:none!important; opacity:0!important; transform:translateY(5px)!important; transition:.2s ease!important; }
+#otter-yidian-toast.show { opacity:1!important; transform:translateY(0)!important; }
+#otter-yidian-root.o-reduced #otter-yidian-pet * { animation:none!important; transition:none!important; }
+@keyframes otterYidianBob { to { transform:translateY(-4px) rotate(1.2deg); } }
+@keyframes otterYidianWave { to { transform:translateY(4px) rotate(-1deg); } }
+@keyframes otterYidianStep { to { transform:translateX(7px) scaleX(.78); } }
+@keyframes otterYidianCelebrate { 35% { transform:translateY(-9px) scale(1.03) rotate(-2deg); } 65% { transform:translateY(0) rotate(2deg); } }
+@media (prefers-reduced-motion:reduce) { #otter-yidian-root * { animation:none!important; transition:none!important; } }

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>一点</title>
+  <link rel="stylesheet" href="app://bundle/pet.css">
+  <link rel="stylesheet" href="app://app/renderer/desktop-card.css">
+</head>
+<body>
+  <div id="otter-yidian-root">
+    <section id="otter-yidian-card" aria-live="polite"></section>
+    <!-- 写一句：文案留在这里，card.js 被字体守卫扫着，不在 JS 里写中文 -->
+    <div id="yidian-note-row" class="o-note-row" data-saved="记下了。" data-failed="没记上，请重试。" data-write="写一句" data-edit="改一句" hidden>
+      <button id="yidian-note-edit" class="o-note-edit" type="button">写一句</button>
+      <input id="yidian-note-input" class="o-note-input" type="text" maxlength="500" placeholder="写一句：这条对我意味着什么" aria-label="写一句批注" hidden>
+      <button id="yidian-note-save" class="o-note-save" type="button" hidden>记下</button>
+    </div>
+    <div id="otter-yidian-toast" role="status"></div>
+  </div>
+  <script src="app://bundle/shared.js"></script>
+  <script src="app://app/renderer/card.js"></script>
+</body>
+</html>

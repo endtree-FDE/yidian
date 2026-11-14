@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>一点 · 我的收藏</title>
+  <link rel="stylesheet" href="library.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <p class="eyebrow">一点｜工作与学习的收藏回看工具</p>
+        <h1>我的收藏</h1>
+        <p class="gentle-note">没看完、忘了回看，都没关系。这里不是待办清单，一点只负责把它们轻轻带回来见你。</p>
+      </div>
+      <div class="tools" aria-label="记录工具">
+        <a class="tool-link" href="stats.html">统计</a>
+        <details class="tool-menu">
+          <summary>提醒设置</summary>
+          <div class="tool-menu-body">
+            <label class="notify-toggle" title="默认安静。开启后，有收藏到期时会收到一条系统通知。">
+              <input id="notify-toggle" type="checkbox">
+              <span>到期时提醒我</span>
+            </label>
+            <div class="quiet-hours" title="免打扰时段内，即使有收藏到期也不发通知。一点会安静地等，过了时段再轻轻提醒你。">
+              <label class="quiet-toggle">
+                <input id="quiet-toggle" type="checkbox">
+                <span>免打扰</span>
+              </label>
+              <input id="quiet-start" type="time" aria-label="免打扰开始时间">
+              <span class="quiet-sep" aria-hidden="true">到</span>
+              <input id="quiet-end" type="time" aria-label="免打扰结束时间">
+            </div>
+          </div>
+        </details>
+        <details class="tool-menu">
+          <summary>备份</summary>
+          <div class="tool-menu-body">
+            <button id="export" type="button">导出备份</button>
+            <button id="export-markdown" type="button" title="Obsidian 友好：每条记录一段，含选段与足迹">导出 Markdown</button>
+            <label class="button" for="import">导入备份</label>
+            <input id="import" type="file" accept="application/json,.json">
+          </div>
+        </details>
+      </div>
+    </header>
+
+    <section id="desktop-panel" class="desktop-panel" hidden>
+      <div class="desktop-panel-text">
+        <strong id="desktop-status">桌面端未连接</strong>
+        <span id="desktop-hint">在桌面端托盘里点「连接浏览器扩展」，把它显示的 6 位码填进来。</span>
+      </div>
+      <form id="desktop-form" class="desktop-form" hidden>
+        <input id="desktop-code" type="text" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="6 位配对码" aria-label="桌面端配对码">
+        <button id="desktop-connect" type="submit">连接</button>
+      </form>
+    </section>
+
+    <details class="howto">
+      <summary>一点怎么用？</summary>
+      <p class="intro">这里保存你收下的网页和选段。每条内容共 4 步：收下 1 次，再回看 3 次。你可以查看下次回看的具体时间；到期时，点击浏览器工具栏里的“一点”完成回看。</p>
+    </details>
+
+    <p class="summary-line" aria-label="收藏概览">
+      <span><strong id="total">0</strong>条收藏</span><i aria-hidden="true">·</i>
+      <span><strong id="due">0</strong>今天待回看</span><i aria-hidden="true">·</i>
+      <span><strong id="complete">0</strong>已完成回看计划</span><i aria-hidden="true">·</i>
+      <span><strong id="encounters">0</strong>途中偶遇</span>
+    </p>
+
+    <div class="toolbar">
+      <label class="search">
+        <input id="search" type="search" placeholder="搜索标题、域名或选段" aria-label="搜索收藏">
+      </label>
+      <button id="archive-grown" class="archive" type="button" disabled title="把已完成回看计划的收藏收进归档，随时可在“已归档”里找回">归档已完成</button>
+    </div>
+
+    <nav class="filters" aria-label="按关系状态查看">
+      <button class="active" type="button" data-filter="all" aria-pressed="true">全部</button>
+      <button type="button" data-filter="due" aria-pressed="false">今天要见</button>
+      <button type="button" data-filter="active" aria-pressed="false">正在相见</button>
+      <button type="button" data-filter="encountered" aria-pressed="false">途中偶遇</button>
+      <button type="button" data-filter="complete" aria-pressed="false">已完成</button>
+      <button type="button" data-filter="archived" aria-pressed="false">已归档</button>
+    </nav>
+
+    <p id="status" role="status" aria-live="polite"></p>
+    <section id="records" class="records" aria-label="收藏记录"></section>
+
+    <details id="migration-guide" class="migration-guide">
+      <summary>
+        <span>换了安装方式？</span>
+        <strong>把旧收藏带过来</strong>
+        <i>只在手动安装时需要</i>
+      </summary>
+      <div class="migration-body">
+        <p>从 Edge 商店正常更新时，收藏会继续保留。只有同时安装“商店版”和“手动版”时，它们才会各自拥有一份本地收藏。</p>
+        <ol class="migration-path">
+          <li><span>旧版</span><strong>开启旧版，关闭新版</strong><small>打开“我的收藏”，点“导出备份”</small></li>
+          <li><span>换边</span><strong>关闭旧版，开启新版</strong><small>不要删除旧版，确认迁移完成后再处理</small></li>
+          <li><span>新版</span><strong>点“导入备份”</strong><small>选择刚才下载的 JSON 文件</small></li>
+        </ol>
+        <p class="migration-note">导入会按网页合并，不会把同一页再复制一份；原来的回看进度和相见足迹会一起回来。</p>
+      </div>
+    </details>
+  </main>
+  <template id="record-template">
+    <article class="record">
+      <div class="record-copy">
+        <p class="record-state"></p>
+        <h2></h2>
+        <p class="record-meta"></p>
+        <p class="record-summary" hidden></p>
+        <p class="record-excerpt" hidden></p>
+        <div class="note-row">
+          <p class="record-note" hidden></p>
+          <button class="note-edit" type="button">写一句</button>
+          <form class="note-form" hidden>
+            <input class="note-input" type="text" maxlength="500" placeholder="写一句：这条对我意味着什么">
+            <button class="note-save" type="submit">记下</button>
+            <button class="note-cancel" type="button">取消</button>
+          </form>
+        </div>
+        <p class="encounter-summary" hidden></p>
+        <details class="footprints">
+          <summary>相见足迹</summary>
+          <ol></ol>
+        </details>
+      </div>
+      <div class="progress" aria-label="再次查看进度"><span></span></div>
+      <div class="record-actions">
+        <button class="open" type="button">打开原网页</button>
+        <button class="restore" type="button" hidden>带回收藏库</button>
+        <button class="delete" type="button">删除</button>
+      </div>
+    </article>
+  </template>
+  <script src="shared.js"></script>
+  <script src="library.js" type="module"></script>
+</body>
+</html>

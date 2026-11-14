@@ -1,0 +1,90 @@
+/* 配对窗：独立小窗，跟收藏库同一套配色（米底 + 深绿 + 一点橙）。 */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+}
+body {
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  color: #24342f;
+}
+.pair-card {
+  box-sizing: border-box;
+  height: 100vh;
+  padding: 22px 24px 18px;
+  background: #fffdf7;
+  border: 1px solid #d9ddd9;
+  border-radius: 18px;
+  box-shadow: 0 18px 48px rgba(36, 52, 47, .18);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.pair-card h1 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: .01em;
+}
+.pair-card p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #62736c;
+}
+.pair-code {
+  font-family: "ZCOOLXiaoWei", Inter, system-ui, sans-serif;
+  font-size: 46px;
+  letter-spacing: .22em;
+  text-indent: .22em;
+  line-height: 1.15;
+  text-align: center;
+  color: #24342f;
+  background: #f7f5ef;
+  border: 1px dashed #c2ccc6;
+  border-radius: 14px;
+  padding: 14px 8px 12px;
+}
+.pair-code.is-expired {
+  color: #8a9691;
+}
+.pair-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pair-actions button {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #c2ccc6;
+  background: #fff;
+  color: #394b45;
+  cursor: pointer;
+}
+.pair-actions button.primary {
+  background: #2e7e69;
+  border-color: #2e7e69;
+  color: #fff;
+}
+.pair-actions button:hover { filter: brightness(1.04); }
+.pair-chip {
+  font-size: 12px;
+  color: #62736c;
+  background: #e8f4ef;
+  border-radius: 999px;
+  padding: 5px 10px;
+}
+.pair-chip.is-done { color: #2e7e69; }
+.pair-chip.is-warn { color: #9c4639; background: #fff0ea; }
+.pair-card footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #8a9691;
+}
+.pair-hint { color: #a8b2ad; }
